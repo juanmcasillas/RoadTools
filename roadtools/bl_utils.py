@@ -128,4 +128,3 @@ if __name__ == "__main__":
     BL_ROAD_UTILS.set_terrain_origin('outpux.gpx','Terrain')
 
 
-
