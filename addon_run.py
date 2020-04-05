@@ -5,7 +5,7 @@ import os
 import sys
 import bpy
 
-filesDir = "/Archive/Src/AC_Tracks/blender/roadtools"
+filesDir = "/Archive/Src/RoadTools/roadtools"
 initFile = "__init__.py"
 
 if filesDir not in sys.path:

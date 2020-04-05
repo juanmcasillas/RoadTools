@@ -1,4 +1,5 @@
 import bpy
+from bl_utils import BL_ROAD_UTILS
 
 from bpy.props import (StringProperty,
                        BoolProperty,
@@ -38,6 +39,7 @@ class ROADTOOLS_OT_MatchTerrain(Operator):
             return {"FINISHED"}
 
         # to the thing here
+        BL_ROAD_UTILS.set_terrain_origin(roadtools_properties.road_curve.name,roadtools_properties.terrain_mesh.name)
         self.report({'INFO'}, 'RoadTools: Matching Terrain')
         return {"FINISHED"}
 
