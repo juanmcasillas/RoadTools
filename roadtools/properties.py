@@ -30,7 +30,13 @@ class ROADTools_Properties(PropertyGroup):
         type=bpy.types.Object,
         name="road_curve",
         description="Select a CURVE with the road"
-    )                       
+    )              
+
+    road_plane: PointerProperty(
+        type=bpy.types.Object,
+        name="road_plane",
+        description="Select a PLANE (apply array)"
+    )           
 
 # ------------------------------------------------------------------------
 # register / unregister

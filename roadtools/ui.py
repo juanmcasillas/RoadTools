@@ -5,12 +5,12 @@ import bpy
 # pressing the button
 # ------------------------------------------------------------------------
 
-class OBJECT_PT_Panel_Terrain(bpy.types.Panel):
-    bl_idname = "OBJECT_PT_Panel_Terrain"
+class OBJECT_PT_Panel_TerrainMatch(bpy.types.Panel):
+    bl_idname = "OBJECT_PT_Panel_TerrainMatch"
     bl_label = "Match Terrain & GPX"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
-    bl_category = "Road"
+    bl_category = "RoadTools"
 
     def draw(self, context):
         scene = context.scene
@@ -19,7 +19,7 @@ class OBJECT_PT_Panel_Terrain(bpy.types.Panel):
         roadtools_properties = scene.roadtools_properties
 
         col.prop_search(roadtools_properties, "terrain_mesh", context.scene, "objects", text="Terrain",icon="MESH_GRID")
-        col.prop_search(roadtools_properties, "road_curve", context.scene, "objects", text="Road Curve", icon="CURVE_PATH")
+        col.prop_search(roadtools_properties, "road_curve", context.scene, "objects", text="Road Curve", icon="FCURVE")
         self.layout.operator("roadtools.match_terrain", icon='SCRIPT', text="Match Terrain Road")
 
 
@@ -29,18 +29,22 @@ class OBJECT_PT_Panel_Terrain(bpy.types.Panel):
 # TODO
 # ------------------------------------------------------------------------
 
-class OBJECT_PT_Panel_Road(bpy.types.Panel):
-    bl_idname = "OBJECT_PT_Panel_Road"
-    bl_label = "Road Tools"
+class OBJECT_PT_Panel_TerrainFlatten(bpy.types.Panel):
+    bl_idname = "OBJECT_PT_Panel_TerrainFlatten"
+    bl_label = "Flatten Terrain with Plane"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
-    bl_category = "Road"
+    bl_category = "RoadTools"
 
     def draw(self, context):
         scene = context.scene
         layout = self.layout
         col = layout.column()
-        self.layout.operator("roadtools.match_terrain", icon='MESH_CUBE', text="Add Cube x")
+        roadtools_properties = scene.roadtools_properties
+
+        col.prop_search(roadtools_properties, "terrain_mesh", context.scene, "objects", text="Terrain",icon="MESH_GRID")
+        col.prop_search(roadtools_properties, "road_plane", context.scene, "objects", text="Road Plane", icon="MESH_PLANE")
+        self.layout.operator("roadtools.flatten_terrain", icon='SCRIPT', text="Flatten Terrain Road")
 
 
 # ------------------------------------------------------------------------
@@ -48,8 +52,8 @@ class OBJECT_PT_Panel_Road(bpy.types.Panel):
 # ------------------------------------------------------------------------
 
 classes = (
-    OBJECT_PT_Panel_Terrain,
-    OBJECT_PT_Panel_Road
+    OBJECT_PT_Panel_TerrainMatch,
+    OBJECT_PT_Panel_TerrainFlatten
 )
 
 def register():

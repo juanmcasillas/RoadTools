@@ -24,7 +24,7 @@ from bpy.types import (Panel,
 class ROADTOOLS_OT_MatchTerrain(Operator):
     bl_idname = 'roadtools.match_terrain'
     bl_description = "Matches a CURVE road with a MESH terrain, set the origin to WORLD_ORIGIN"
-    bl_label = 'Add Cube'
+    bl_label = 'Match Terrain & Road Curve'
 
     def execute(self, context):
         scene = context.scene
@@ -39,8 +39,14 @@ class ROADTOOLS_OT_MatchTerrain(Operator):
             return {"FINISHED"}
 
         # to the thing here
-        BL_ROAD_UTILS.set_terrain_origin(roadtools_properties.road_curve.name,roadtools_properties.terrain_mesh.name)
-        self.report({'INFO'}, 'RoadTools: Matching Terrain')
+        ret, msg = BL_ROAD_UTILS.set_terrain_origin(
+            roadtools_properties.road_curve.name,
+            roadtools_properties.terrain_mesh.name
+        )
+
+        level = 'INFO'
+        if not ret: level = 'ERROR'
+        self.report({level}, 'RoadTools: Matching Terrain: %s' % msg)
         return {"FINISHED"}
 
 # ------------------------------------------------------------------------

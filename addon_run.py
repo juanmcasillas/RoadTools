@@ -25,3 +25,5 @@ exec(compile(open(file).read(), initFile, 'exec'))
 
 if 'DEBUG_MODE' in sys.argv:
     sys.argv.remove('DEBUG_MODE')
+
+# to reload: bpy.ops.script.reload()

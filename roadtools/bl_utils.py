@@ -24,7 +24,7 @@ class BL_DEBUG:
         if scale:
             o.empty_display_size = scale
 
-    def clear_marks(self, what=None):
+    def clear_marks(what=None):
         "clear all the objects starting with what name"
         what = what or 'empty'
         for o in bpy.data.objects:
@@ -83,11 +83,10 @@ class BL_ROAD_UTILS:
 
         obj_s=  bpy.data.objects[curve]
         obj_t=  bpy.data.objects[terrain]
-        mesh_t = bpy.data.meshes[terrain]
+        mesh_t = bpy.data.meshes[obj_t.data.name]
 
         points = BL_ROAD_UTILS.get_curve_points(curve)
         first_point = points[0]
-        print(first_point.co)
         
         #ray_cast (this is important)
         #result, boolean
@@ -97,7 +96,11 @@ class BL_ROAD_UTILS:
         #object, Ray cast object, Object
         #matrix, Matrix, float multi-dimensional array of 4 * 4 items in [-inf, inf]
 
-        result, location, normal, index, object, matrix = bpy.context.scene.ray_cast( bpy.context.view_layer, first_point.co.xyz, (0,0,-1) )
+        result, location, normal, index, object, matrix = bpy.context.scene.ray_cast( 
+            bpy.context.view_layer, 
+            first_point.co.xyz, 
+            (0,0,-1) # Z Down
+        )
         #BL_DEBUG.set_mark( obj_s.matrix_world @ location )
 
         if result:
@@ -113,8 +116,11 @@ class BL_ROAD_UTILS:
             bpy.context.view_layer.objects.active = obj_s
             bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
             obj_s.location = (0,0,0)
+            bpy.context.scene.cursor.location = (0,0,0)
         else:
-            print("Can't found terrain below the curve. Check input")
+            return(("ERROR", "Can't found terrain below the curve"))
+
+        return(("INFO", "Done"))
 
         
 # TEST_IT

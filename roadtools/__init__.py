@@ -13,7 +13,7 @@ bl_info = {
 
 
 
-modulesNames = [ 'properties', 'op_match_terrain', 'ui']
+modulesNames = [ 'properties', 'op_match_terrain', 'op_flatten_terrain', 'ui']
 
 import sys
 import importlib
