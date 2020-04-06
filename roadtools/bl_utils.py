@@ -9,6 +9,9 @@ import bpy
 from mathutils import Vector, Matrix, Euler
 from math import radians
 import bmesh
+from itertools import islice
+
+
 
 class BL_DEBUG:
     def __init__(self):
@@ -36,6 +39,12 @@ class BL_UTILS:
     def __init__(self):
         pass
 
+    def chunk(it, size):
+        "chunk an array in sizes of size elements"
+        
+        it = iter(it)
+        return iter(lambda: tuple(islice(it, size)), ())
+        
     def get_3dcur():
         "return the position of the 3d cursor"
         return bpy.context.scene.cursor.location
