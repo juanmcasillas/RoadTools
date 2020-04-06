@@ -282,4 +282,4 @@ class BL_FLATTEN:
         #return(("ERROR", "Can't found terrain below the curve"))
         return(("INFO", "Done"))
 
-BL_FLATTEN.flatten_terrain('Plane','Terrain')        
+#BL_FLATTEN.flatten_terrain('Plane','Terrain')        
