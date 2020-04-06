@@ -9,10 +9,46 @@ class BL_FLATTEN:
     def __init__(self):
         pass
 
+
+    def getEdgesForVertex(v_index, mesh, marked_edges):
+
+        all_edges = []
+        for e in mesh.edges:
+            for v in e.verts:
+                if v.index == v_index:
+                    all_edges.append(e)
+
+        #all_edges = [e for e in mesh.edges if v_index in e.verts]
+        #print("all_edges", all_edges)
+        #print(mesh.edges[0].verts[0])
+
+        unmarked_edges = [e for e in all_edges if e.index not in marked_edges]
+        return unmarked_edges
+
+    def findConnectedVerts(v_index, mesh, connected_verts, marked_edges, maxdepth=1, level=0):  
+        if level >= maxdepth:
+            return
+
+        edges = BL_FLATTEN.getEdgesForVertex(v_index, mesh, marked_edges)
+
+        for e in edges:
+            othr_v_index = [idx for idx in mesh.edges[e.index].verts if idx != v_index][0]
+            connected_verts[othr_v_index] = True
+            marked_edges.append(e.index)
+            BL_FLATTEN.findConnectedVerts(othr_v_index, mesh, connected_verts, marked_edges, maxdepth=maxdepth, level=level+1)
+
+    # mesh = bpy.context.object.data
+
+    # connected_verts = {}
+    # marked_edges = []
+
+    # findConnectedVerts(0, mesh, connected_verts, marked_edges, maxdepth=1)
+    # print(",".join([str(v) for v in connected_verts.keys()]))
+
     def flatten_terrain(plane, terrain):
         """try to flatten a terrain, using the plane as reference plane must have ALL modifiers APPLIED"""
         
-        DEBUG = False
+        DEBUG = True
 
         BL_DEBUG.clear_marks()
 
@@ -32,16 +68,16 @@ class BL_FLATTEN:
         found_dict = {}
 
         pc = 0
-
-        for p in mesh_s.polygons:
-
+        #for p in mesh_s.polygons:
+        for v in mesh_s.vertices:
             # first point, first vert, is 0.
             # skip center in quads
             #check_points = [ ("c_%d" % p.index, p.center) ]
-            check_points = [  ]
+            #check_points = [  ]
                 
-            for v in p.vertices:
-                check_points.append( (v,mesh_s.vertices[v]) )
+            #for v in p.vertices:
+            #    print(v)
+            #    check_points.append( (v.index,v) )
 
             #
             # ok, process them mesh can be Down (should be)
@@ -51,71 +87,67 @@ class BL_FLATTEN:
             #
             # retrieve i the index of the point, v the point
 
-            for key,v in check_points:
-
-                if key in found_dict.keys():
-                    continue
-
-                terrain_down = True
-                DEBUG and BL_DEBUG.set_mark( obj_s.matrix_world @ v.co.xyz )
+            terrain_down = True
+            DEBUG and BL_DEBUG.set_mark( obj_s.matrix_world @ v.co.xyz, kind="PLAIN_AXES" )
+            result, location, normal, index, object, matrix = bpy.context.scene.ray_cast( 
+                bpy.context.view_layer, 
+                obj_s.matrix_world @ v.co.xyz, 
+                #v.normal * -1 # Z Down
+                (0,0,-1.0)
+            )
+            #print("R", result,index, object, obj_s.matrix_world @ v.co.xyz  )
+            if result and object.name == terrain: 
+                DEBUG and BL_DEBUG.set_mark( location, kind="SPHERE")
+            
+            if not result:
                 result, location, normal, index, object, matrix = bpy.context.scene.ray_cast( 
                     bpy.context.view_layer, 
                     obj_s.matrix_world @ v.co.xyz, 
-                    #v.normal * -1 # Z Down
-                    obj_s.matrix_world @ Vector((0,0,-1.0))
+                    #v.normal # Z Up
+                    (0,0,1.0)
                 )
-                #print("R", result,index, object, obj_s.matrix_world @ v.co.xyz  )
-                if result and object.name == terrain: 
-                    DEBUG and BL_DEBUG.set_mark( location, kind="SPHERE")
-                
                 if not result:
-                    result, location, normal, index, object, matrix = bpy.context.scene.ray_cast( 
-                        bpy.context.view_layer, 
-                        obj_s.matrix_world @v.co.xyz, 
-                        #v.normal # Z Up
-                        obj_s.matrix_world @ Vector((0,0,1.0))
-                    )
-                    if not result:
-                        # something bizarre happens with that point
-                        print("Point %s doesn't match terrain geometry" % v.co.xyz)
-                        DEBUG and BL_DEBUG.set_mark(obj_s.matrix_world @ v.co.xyz)
-                        continue
-                    #print("R2", result,index, object )
-                    if result and object.name == terrain: 
-                        DEBUG and BL_DEBUG.set_mark(location, kind="CUBE")
-                    ## terrain is upwards
-                    terrain_down = False
-        
-                # terrain is downwards
+                    # something bizarre happens with that point
+                    print("Point %s doesn't match terrain geometry" % v.co.xyz)
+                    DEBUG and BL_DEBUG.set_mark(obj_s.matrix_world @ v.co.xyz)
+                    continue
+                #print("R2", result,index, object )
+                if result and object.name == terrain: 
+                    DEBUG and BL_DEBUG.set_mark(location, kind="CUBE")
+                ## terrain is upwards
+                terrain_down = False
+    
+            # terrain is downwards
 
-                if object.name == terrain:
-                    found_dict[key] = True
-                    point_data.append( (terrain_down, index, v, location )) # terrain is down, faceindex, point
-                #else:
-                #    pass
-                    #point_data.append( (terrain_down, index, v, location ))
-                    # insert a fake point, but use face index 
-                    # don't know what I'm going to do with that.
-                    #_,index,_,_ = point_data[-1]
-                    #point_data.append( (None, index, v, None )) # fake point
+            if object.name == terrain:
+                #found_dict[key] = True
+                point_data.append( (terrain_down, index, v, location )) # terrain is down, faceindex, point
+            #else:
+            #    pass
+                #point_data.append( (terrain_down, index, v, location ))
+                # insert a fake point, but use face index 
+                # don't know what I'm going to do with that.
+                #_,index,_,_ = point_data[-1]
+                #point_data.append( (None, index, v, None )) # fake point
 
             pc +=1
-            #if pc >= 2:
-            #    break
+            if pc / 4 >= 10:
+                break
 
         #for terrain_down, faceindex, p in point_data:
             #print(terrain_down, faceindex, p)
         #    BL_DEBUG.set_mark(obj_s.matrix_world  @ p.xyz)
-        print("Calculated Points/Polys %d/%d" % (len(point_data), pc))
+        print("Total/Calculated Points/Polys (Quads) %d/%d/%d" % (len(mesh_s.vertices),pc, pc % 4))
 
         # at this point XD point_data has 
         # terrain_up/down, face_index, point, location)
-
-        bpy.ops.object.mode_set(mode = 'EDIT')
+      
         
+        bpy.ops.object.mode_set(mode = 'EDIT')
         bm = bmesh.new()
         bm.from_mesh(mesh_t)
         bm.verts.ensure_lookup_table()
+        bm.edges.ensure_lookup_table()
         bm.faces.ensure_lookup_table()
 
         # unselect all
@@ -148,20 +180,27 @@ class BL_FLATTEN:
         for f in sel_faces:
             sel_verts += f.verts
 
-        #print(sel_verts)
-        for point in point_data:
-            terrain_down, index, point, location = point
+        #
+        # delete all the empties
+        #
+
+        BL_DEBUG.clear_marks()
+
+        for item in point_data:
+            terrain_down, index, point, location = item
             
             shortest = None
             shortestDist = 99999999999999
 
             for v in sel_verts: #go throught all vertices ... in the selected faces!
-                dist = (Vector( obj_s.matrix_world @ v.co.xyz ) - location).length  #calculate the distance
+                dist = (Vector( v.co.xyz ) - location).length  #calculate the distance
+                #print(dist)
                 if dist < shortestDist : #test if better so far
                     shortest = v
                     shortestDist = dist
             
             if shortest:
+                BL_DEBUG.set_mark(obj_s.matrix_world @ point.co.xyz, kind="PLAIN_AXES")
                 BL_DEBUG.set_mark(location, kind="CUBE")
                 BL_DEBUG.set_mark(shortest.co.xyz, kind="SPHERE")
                 ##dist = (Vector( obj_s.matrix_world @ point.co.xyz ) - obj_t.matrix_world @ shortest.co.xyz).length
@@ -170,7 +209,18 @@ class BL_FLATTEN:
                 #p2 = obj_t.matrix_world @ shortest.co.xyz               
                 # dist =  point.co.z - shortest.co.z
                 shortest.co[2] = point.co.z
-                print(shortest, shortest.index, shortest.co)
+
+                connected_verts = {}
+                marked_edges = []
+                print("---")
+                BL_FLATTEN.findConnectedVerts(shortest.index, bm, connected_verts, marked_edges, maxdepth=1)
+                # print(",".join([str(v) for v in connected_verts.keys()]))
+                for near in connected_verts.keys():
+                    print("near", near)
+                    near.co[2] = point.co.z
+                    BL_DEBUG.set_mark(near.co.xyz)
+
+                #print(shortest, shortest.index, shortest.co)
                 #bmesh.ops.translate(bm, verts=[shortest], vec= (dist) * shortest.normal)
 
 
@@ -232,4 +282,4 @@ class BL_FLATTEN:
         #return(("ERROR", "Can't found terrain below the curve"))
         return(("INFO", "Done"))
 
-#BL_FLATTEN.flatten_terrain('Plane','Terrain')        
+BL_FLATTEN.flatten_terrain('Plane','Terrain')        
