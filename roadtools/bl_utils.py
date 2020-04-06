@@ -41,6 +41,81 @@ class BL_UTILS:
         return bpy.context.scene.cursor.location
 
 
+    def getEdgesForVertex(v_index, mesh, marked_edges):
+
+        all_edges = []
+        for e in mesh.edges:
+            for v in e.verts:
+                if v.index == v_index:
+                    all_edges.append(e)
+
+        #all_edges = [e for e in mesh.edges if v_index in e.verts]
+        #print("all_edges", all_edges)
+        #print(mesh.edges[0].verts[0])
+
+        unmarked_edges = [e for e in all_edges if e.index not in marked_edges]
+        return unmarked_edges
+
+    def findConnectedVerts(v_index, mesh, connected_verts, marked_edges, maxdepth=1, level=0):  
+        if level >= maxdepth:
+            return
+
+        edges = BL_UTILS.getEdgesForVertex(v_index, mesh, marked_edges)
+
+        for e in edges:
+            othr_v_index = [idx for idx in mesh.edges[e.index].verts if idx != v_index][0]
+            connected_verts[othr_v_index] = True
+            marked_edges.append(e.index)
+            BL_UTILS.findConnectedVerts(othr_v_index, mesh, connected_verts, marked_edges, maxdepth=maxdepth, level=level+1)
+
+    # connected_verts = {}
+    # marked_edges = []
+    # findConnectedVerts(0, mesh, connected_verts, marked_edges, maxdepth=1)
+    # print(",".join([str(v) for v in connected_verts.keys()]))
+
+
+    def triangulate_face_quad(bm, face_idx):
+
+        bm.verts.ensure_lookup_table()
+        bm.edges.ensure_lookup_table()
+        bm.faces.ensure_lookup_table()
+
+        # work on selected face
+        f = bm.faces[face_idx]
+        
+        verts = []
+        for v in f.verts:
+            verts.append(bm.verts[v.index])
+            
+        vcenter = bm.verts.new(f.calc_center_median())
+        bmesh.ops.delete(bm, geom=[f], context='FACES_ONLY')
+
+        bm.verts.ensure_lookup_table()
+        for v in verts:
+            bm.edges.new((v, vcenter))
+
+        # ugly, but works XD
+
+        if len(verts) == 3:
+            f1 = [verts[0], verts[1], vcenter]
+            f2 = [verts[1], verts[2], vcenter]
+            f3 = [verts[2], verts[0], vcenter]
+            bmesh.ops.contextual_create(bm, geom= f1)
+            bmesh.ops.contextual_create(bm, geom= f2)
+            bmesh.ops.contextual_create(bm, geom= f3)
+        
+        if len(verts) == 4:
+            f1 = [verts[0], verts[1], vcenter]
+            f2 = [verts[1], verts[2], vcenter]
+            f3 = [verts[2], verts[3], vcenter]
+            f4 = [verts[3], verts[0], vcenter]
+            bmesh.ops.contextual_create(bm, geom= f1)
+            bmesh.ops.contextual_create(bm, geom= f2)
+            bmesh.ops.contextual_create(bm, geom= f3)
+            bmesh.ops.contextual_create(bm, geom= f4)
+
+
+
 
 class BL_ROAD_UTILS:
     def __init__(self):
