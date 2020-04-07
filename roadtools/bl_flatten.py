@@ -102,6 +102,7 @@ class BL_FLATTEN:
         
         DEBUG = False
         LIMIT = None
+        MIN_FACE_DIST = 10
 
         BL_DEBUG.clear_marks()
 
@@ -142,6 +143,9 @@ class BL_FLATTEN:
             bm.faces[index].select = True
 
         # extend the faces
+        # leave faces selected to process the
+        # boundaries if needed
+
         #sel_verts = [v for v in bm.verts if v.select]
         #sel_edges = [e for e in bm.edges if e.select]
         sel_faces = [f for f in bm.faces if f.select]
@@ -154,17 +158,19 @@ class BL_FLATTEN:
                 f.select = True
 
         geom = [f for f in bm.faces if f.select]
-        bmesh.ops.triangulate(bm, faces=geom)        
+        ret_trig = bmesh.ops.triangulate(bm, faces=geom)        
 
-        for f in ret_geom['geom']:
+        #print("Faces:")
+        #print(ret_trig['face_map'])
+
+        # select the new created triangles
+
+        for f in ret_trig['faces']:
                 f.select = True
-                
-        ##############################################################
-        #
+               
+        selected_faces = ret_trig['faces']
+
         # 0. at this point, faces are triangulated, and selected
-        # 
-        ##############################################################
-    
  
         ##############################################################
         #
@@ -199,6 +205,8 @@ class BL_FLATTEN:
 
         faces_to_delete = {}
         
+        for face in selected_faces: bm.faces[face.index].select = False
+        
         for item in point_data:
                 terrain_down, index, point, location = item
                 #print(terrain_down,index, point, location)
@@ -206,15 +214,32 @@ class BL_FLATTEN:
 
                 if index not in faces_to_delete.keys():
                     faces_to_delete[index] = bm.faces[index]
-    
+
+                # select the bounding faces.
+                local_faces =  bmesh.ops.region_extend(bm, geom=[bm.faces[index]],use_faces=True, use_face_step=False,use_contract=False)
+
+                # for each selected face, calculate the distance to the road point,
+                # and mark for removal all the faces that meets the requerimient
+                # distance = 10m
+                for f in local_faces['geom']:
+                    if isinstance(f, bmesh.types.BMFace) and f.index not in faces_to_delete.keys():
+                
+                        for fv in f.verts:
+                            vpw = obj_s.matrix_world @ point.co
+                            vtw = obj_t.matrix_world @ fv.co
+                            dist = (vpw.xy - vtw.xy).length
+                            if dist < MIN_FACE_DIST:
+                                print("Face too near: ",f.index,dist)
+                                faces_to_delete[f.index] = bm.faces[f.index]
+
         # extend the selection
 
         EXTEND_SELECTION = False
         if EXTEND_SELECTION:
 
             for face in bm.faces: face.select = False
-            for vert in bm.verts: vert.select = False
-            for edge in bm.edges: edge.select = False        
+            #for vert in bm.verts: vert.select = False
+            #for edge in bm.edges: edge.select = False        
 
             for f in faces_to_delete.keys():
                 bm.faces[f].select = True        
@@ -230,7 +255,8 @@ class BL_FLATTEN:
                 if isinstance(f, bmesh.types.BMFace):
                     faces_to_delete[f.index] = bm.faces[f.index]
 
-        
+
+        # delete the result faces        
         bmesh.ops.delete(bm, geom=list(faces_to_delete.values()), context='FACES_KEEP_BOUNDARY') # FACES_ONLY
 
         ##############################################################
@@ -342,3 +368,22 @@ class BL_FLATTEN:
         return(("INFO", "Done"))
 
 #BL_FLATTEN.extend_terrain('Plane','Terrain')        
+
+## distances should be calculated in this way:
+
+#vp = bpy.data.objects['Plane'].data.vertices[37]
+#vt = bpy.data.meshes['Terrain'].vertices[24449]
+#vp = Vector((-33.21149826049805, -8.433300971984863, 6.760486125946045))
+#vt = Vector((-129.67138671875, -46.43072509765625, 3.25))
+# goal distance (marked by measure tool: 6.307367787950501)
+
+#vpw = bpy.data.objects['Plane'].matrix_world @ vp.co
+#vtw = bpy.data.objects['Terrain'].matrix_world @ vt.co
+
+#d1 = (vp.co.xyz - vt.co.xyz).length
+#d2 = (vpw.xyz - vtw.xyz).length ## this one!
+#d3 = (vpw.xy - vtw.xy).length # 2d
+
+#print("distance 1: ", d1)
+#print("distance 2: ", d2)
+#print("distance 3: ", d3)
