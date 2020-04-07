@@ -112,7 +112,7 @@ class BL_UTILS:
             bmesh.ops.contextual_create(bm, geom= f1)
             bmesh.ops.contextual_create(bm, geom= f2)
             bmesh.ops.contextual_create(bm, geom= f3)
-        
+
         if len(verts) == 4:
             f1 = [verts[0], verts[1], vcenter]
             f2 = [verts[1], verts[2], vcenter]
@@ -123,7 +123,8 @@ class BL_UTILS:
             bmesh.ops.contextual_create(bm, geom= f3)
             bmesh.ops.contextual_create(bm, geom= f4)
 
-
+        bm.verts.index_update()
+        bm.faces.index_update()
 
 
 class BL_ROAD_UTILS:
