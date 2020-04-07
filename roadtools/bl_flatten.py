@@ -288,31 +288,125 @@ class BL_FLATTEN:
 
         ##############################################################
         #
-        # 2. create new geometry
+        # 3. Some tests. Disabled
         # 
-        ##############################################################        
-    
+        ##############################################################  
+
+        if False:
+
+            #
+            # test test test
+            # this method triangulates the face selected.
+            # demo, don't use it for now.
+            #
+            for item in point_data:
+                terrain_down, index, point, location = item
+                BL_DEBUG.set_mark(obj_s.matrix_world @ point.co.xyz, kind="PLAIN_AXES")
+                BL_DEBUG.set_mark(location, kind="CUBE")
+                BL_UTILS.triangulate_face_quad(bm, index)
+                
+            #
+            # test test test
+            # this calculates the nearest point, and moves the 
+            # vertex to the height of the point
+            #
+            
+            sel_faces = [f for f in bm.faces if f.select]
+            sel_verts = []
+            for f in sel_faces:
+                sel_verts += f.verts
+
+            #
+            # delete all the empties
+            #
+
+            BL_DEBUG.clear_marks()
+
+            for item in point_data:
+                terrain_down, index, point, location = item
+                
+                shortest = None
+                shortestDist = 99999999999999
+
+                for v in sel_verts: #go throught all vertices ... in the selected faces!
+                    dist = (Vector( v.co.xyz ) - location).length  #calculate the distance
+                    #print(dist)
+                    if dist < shortestDist : #test if better so far
+                        shortest = v
+                        shortestDist = dist
+                
+                if shortest:
+                    BL_DEBUG.set_mark(obj_s.matrix_world @ point.co.xyz, kind="PLAIN_AXES")
+                    BL_DEBUG.set_mark(location, kind="CUBE")
+                    BL_DEBUG.set_mark(shortest.co.xyz, kind="SPHERE")
+                    ##dist = (Vector( obj_s.matrix_world @ point.co.xyz ) - obj_t.matrix_world @ shortest.co.xyz).length
+                    ##!z
+                    #p1 = obj_s.matrix_world @ point.co.xyz
+                    #p2 = obj_t.matrix_world @ shortest.co.xyz               
+                    # dist =  point.co.z - shortest.co.z
+                    shortest.co[2] = point.co.z
+
+                    connected_verts = {}
+                    marked_edges = []
+                    print("---")
+                    BL_FLATTEN.findConnectedVerts(shortest.index, bm, connected_verts, marked_edges, maxdepth=1)
+                    # print(",".join([str(v) for v in connected_verts.keys()]))
+                    for near in connected_verts.keys():
+                        print("near", near)
+                        near.co[2] = point.co.z
+                        BL_DEBUG.set_mark(near.co.xyz)
+
+                    #print(shortest, shortest.index, shortest.co)
+                    #bmesh.ops.translate(bm, verts=[shortest], vec= (dist) * shortest.normal)   
+
+
+        ##############################################################
+        #
+        # End
+        # update the meshes
+        # free the bmesh
+        # 
+        ##############################################################  
+
         bm.calc_loop_triangles()
         bm.to_mesh(obj_t.data)
         obj_t.data.update()  
+        bm.free()
+  
+        #return(("ERROR", "Can't found terrain below the curve"))
+        return(("INFO", "Done"))
 
+
+    def add_geometry(plane, terrain):
+      
+        DEBUG = False
+        LIMIT = None
+        MIN_FACE_DIST = 10
+
+        BL_DEBUG.clear_marks()
+
+        # build a table with the point and the face_idx, to speed up the thing
+        # store the vertex only one time. use raycast to the Z down to check the
+        # points, instead closest.
+        # use side points, and center
+
+        obj_s=  bpy.data.objects[plane]
+        mesh_s = obj_s.data
+        obj_t=  bpy.data.objects[terrain]
+
+        BL_DEBUG.clear_marks()
+
+        bm = bmesh.new()
+        bm.from_mesh(obj_t.data)
         bm.verts.ensure_lookup_table()
         bm.edges.ensure_lookup_table()
         bm.faces.ensure_lookup_table()
-        bm.faces.index_update()
-        bm.edges.index_update()
-        bm.verts.index_update()
 
-        #        
-        # I have to CHANGE to OBJECT in order to keep working on that
-        # and update the structure. After change, return to edit and
-        # keep working, it works.
-        # 
-        bpy.ops.object.mode_set(mode = 'OBJECT')                 
-        bpy.ops.object.mode_set(mode = 'EDIT')     
-
-        # first, project Plane verts in MESH verts, and get their mapping index.
-        # then work with THAT points
+        # here, I can flatten or move the thing
+        #for f in  bm.faces:
+        #    if f.select:
+        #        for v in f.verts:
+        #            bm.verts[v.index].co[2] += 5
 
         verts = []
         for v in mesh_s.vertices:
@@ -332,8 +426,9 @@ class BL_FLATTEN:
         # update the index of the new created verts. WTF ???
         bm.verts.index_update()
         bm.verts.ensure_lookup_table()
-        current_faces = [face.index for face in bm.faces]
-        
+
+        current_faces = [f.index for f in bm.faces if f.select]
+
         LIMIT = None
         pc = 0
         idx = 0
@@ -467,82 +562,7 @@ class BL_FLATTEN:
             
             for f in newf['faces']:
                 if f.normal.z < 0:
-                    bm.faces[f.index].normal_flip()
-
-
-        ##############################################################
-        #
-        # 3. Some tests. Disabled
-        # 
-        ##############################################################  
-
-        if False:
-
-            #
-            # test test test
-            # this method triangulates the face selected.
-            # demo, don't use it for now.
-            #
-            for item in point_data:
-                terrain_down, index, point, location = item
-                BL_DEBUG.set_mark(obj_s.matrix_world @ point.co.xyz, kind="PLAIN_AXES")
-                BL_DEBUG.set_mark(location, kind="CUBE")
-                BL_UTILS.triangulate_face_quad(bm, index)
-                
-            #
-            # test test test
-            # this calculates the nearest point, and moves the 
-            # vertex to the height of the point
-            #
-            
-            sel_faces = [f for f in bm.faces if f.select]
-            sel_verts = []
-            for f in sel_faces:
-                sel_verts += f.verts
-
-            #
-            # delete all the empties
-            #
-
-            BL_DEBUG.clear_marks()
-
-            for item in point_data:
-                terrain_down, index, point, location = item
-                
-                shortest = None
-                shortestDist = 99999999999999
-
-                for v in sel_verts: #go throught all vertices ... in the selected faces!
-                    dist = (Vector( v.co.xyz ) - location).length  #calculate the distance
-                    #print(dist)
-                    if dist < shortestDist : #test if better so far
-                        shortest = v
-                        shortestDist = dist
-                
-                if shortest:
-                    BL_DEBUG.set_mark(obj_s.matrix_world @ point.co.xyz, kind="PLAIN_AXES")
-                    BL_DEBUG.set_mark(location, kind="CUBE")
-                    BL_DEBUG.set_mark(shortest.co.xyz, kind="SPHERE")
-                    ##dist = (Vector( obj_s.matrix_world @ point.co.xyz ) - obj_t.matrix_world @ shortest.co.xyz).length
-                    ##!z
-                    #p1 = obj_s.matrix_world @ point.co.xyz
-                    #p2 = obj_t.matrix_world @ shortest.co.xyz               
-                    # dist =  point.co.z - shortest.co.z
-                    shortest.co[2] = point.co.z
-
-                    connected_verts = {}
-                    marked_edges = []
-                    print("---")
-                    BL_FLATTEN.findConnectedVerts(shortest.index, bm, connected_verts, marked_edges, maxdepth=1)
-                    # print(",".join([str(v) for v in connected_verts.keys()]))
-                    for near in connected_verts.keys():
-                        print("near", near)
-                        near.co[2] = point.co.z
-                        BL_DEBUG.set_mark(near.co.xyz)
-
-                    #print(shortest, shortest.index, shortest.co)
-                    #bmesh.ops.translate(bm, verts=[shortest], vec= (dist) * shortest.normal)   
-
+                    bm.faces[f.index].normal_flip()        
 
         ##############################################################
         #
@@ -560,4 +580,21 @@ class BL_FLATTEN:
         #return(("ERROR", "Can't found terrain below the curve"))
         return(("INFO", "Done"))
 
+    def fill_holes(terrain,sides=6):
+        obj_t=  bpy.data.objects['Terrain']
+        bm = bmesh.new()
+        bm.from_mesh(obj_t.data)
+        bm.verts.ensure_lookup_table()
+        bm.edges.ensure_lookup_table()
+        bm.faces.ensure_lookup_table()
+        bmesh.ops.holes_fill(bm, edges=bm.edges,sides=sides)
+        bm.calc_loop_triangles()
+        bm.to_mesh(obj_t.data)
+        obj_t.data.update()  
+        bm.free()        
+        #return(("ERROR", "Can't found terrain below the curve"))
+        return(("INFO", "Done"))
+
 #BL_FLATTEN.extend_terrain('Plane','Terrain')        
+#BL_FLATTEN.add_geometry('Plane','Terrain')    
+#BL_FLATTEN.fill_holes('Terrain')    
