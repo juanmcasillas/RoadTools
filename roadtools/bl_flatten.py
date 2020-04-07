@@ -2,6 +2,7 @@ import bpy
 from mathutils import Vector, Matrix, Euler
 from math import radians
 import bmesh   
+import sys
 
 from bl_utils import BL_DEBUG,BL_UTILS,BL_ROAD_UTILS
 
@@ -160,9 +161,6 @@ class BL_FLATTEN:
         geom = [f for f in bm.faces if f.select]
         ret_trig = bmesh.ops.triangulate(bm, faces=geom)        
 
-        #print("Faces:")
-        #print(ret_trig['face_map'])
-
         # select the new created triangles
 
         for f in ret_trig['faces']:
@@ -170,6 +168,9 @@ class BL_FLATTEN:
                
         selected_faces = ret_trig['faces']
 
+        sorround_faces = [f.index for f in bm.faces if f.select]
+            
+    
         # 0. at this point, faces are triangulated, and selected
  
         ##############################################################
@@ -205,7 +206,8 @@ class BL_FLATTEN:
 
         faces_to_delete = {}
         
-        for face in selected_faces: bm.faces[face.index].select = False
+        ###tmpremove
+        ###for face in selected_faces: bm.faces[face.index].select = False
         
         for item in point_data:
                 terrain_down, index, point, location = item
@@ -216,7 +218,13 @@ class BL_FLATTEN:
                     faces_to_delete[index] = bm.faces[index]
 
                 # select the bounding faces.
-                local_faces =  bmesh.ops.region_extend(bm, geom=[bm.faces[index]],use_faces=True, use_face_step=False,use_contract=False)
+                local_faces =  bmesh.ops.region_extend(
+                    bm, 
+                    geom=[bm.faces[index]],
+                    use_faces=True, 
+                    use_face_step=False,
+                    use_contract=False
+                )
 
                 # for each selected face, calculate the distance to the road point,
                 # and mark for removal all the faces that meets the requerimient
@@ -229,7 +237,7 @@ class BL_FLATTEN:
                             vtw = obj_t.matrix_world @ fv.co
                             dist = (vpw.xy - vtw.xy).length
                             if dist < MIN_FACE_DIST:
-                                print("Face too near: ",f.index,dist)
+                                #print("Face too near: ",f.index,dist)
                                 faces_to_delete[f.index] = bm.faces[f.index]
 
         # extend the selection
@@ -255,9 +263,28 @@ class BL_FLATTEN:
                 if isinstance(f, bmesh.types.BMFace):
                     faces_to_delete[f.index] = bm.faces[f.index]
 
-
+        
         # delete the result faces        
         bmesh.ops.delete(bm, geom=list(faces_to_delete.values()), context='FACES_KEEP_BOUNDARY') # FACES_ONLY
+
+
+
+
+
+        # remove from selected_faces faces_to_delete, in order to work 
+        # with them right now.
+
+        #sorround_faces_tmp = []
+        #current_faces = [face.index for face in bm.faces]
+
+        #for face_idx in sorround_faces:
+        #    if face_idx not in faces_to_delete.keys() and face_idx in current_faces:
+        #        #print("face_idx is not deleted", face_idx)
+        #        sorround_faces_tmp.append(face_idx)
+
+        #sorround_faces = sorround_faces_tmp
+        #print("faces!")
+        #print(sorround_faces)
 
         ##############################################################
         #
@@ -265,17 +292,183 @@ class BL_FLATTEN:
         # 
         ##############################################################        
     
-        if False:    
-            print("Points/faces: ", len(point_data), len(point_data)/4)
-        
-            for plane_faces in list(BL_UTILS.chunk(point_data,4)):
-                #print(plane_faces)
+        bm.calc_loop_triangles()
+        bm.to_mesh(obj_t.data)
+        obj_t.data.update()  
 
-                for vertex in plane_faces:
-                    terrain_down, index, point, location = vertex
-                    #bm.verts.new( obj_t.matrix_world.inverted() @ location_a )        
-                    bm.verts.new( location )         
+        bm.verts.ensure_lookup_table()
+        bm.edges.ensure_lookup_table()
+        bm.faces.ensure_lookup_table()
+        bm.faces.index_update()
+        bm.edges.index_update()
+        bm.verts.index_update()
+
+        #        
+        # I have to CHANGE to OBJECT in order to keep working on that
+        # and update the structure. After change, return to edit and
+        # keep working, it works.
+        # 
+        bpy.ops.object.mode_set(mode = 'OBJECT')                 
+        bpy.ops.object.mode_set(mode = 'EDIT')     
+
+        # first, project Plane verts in MESH verts, and get their mapping index.
+        # then work with THAT points
+
+        verts = []
+        for v in mesh_s.vertices:
+            verts.append(v.index)
+
+        mesh_vertex = []
+        for v_idx in verts:
+            world_point = obj_s.matrix_world @ obj_s.data.vertices[v_idx].co
+            local_point = obj_t.matrix_world.inverted() @ world_point
+
+            #set_mark( obj_s.matrix_world @ obj_s.data.vertices[v_idx].co, kind='PLAIN_AXES', scale=0.2 )
+            #set_mark( obj_t.matrix_world @ local_point,  scale=0.2 )
             
+            vnew = bm.verts.new( local_point )
+            mesh_vertex.append(vnew)
+
+        # update the index of the new created verts. WTF ???
+        bm.verts.index_update()
+        bm.verts.ensure_lookup_table()
+        current_faces = [face.index for face in bm.faces]
+        
+        LIMIT = None
+        pc = 0
+        idx = 0
+        GEOM_TO_DO = []
+        MESH_VERTEX_LEN = int(len(mesh_vertex)/2)-1
+        for pc in range(MESH_VERTEX_LEN):
+            
+            # iterate about the number of quads
+            
+            edges = []
+            if pc == 0:
+                e_1 = ( mesh_vertex[0], mesh_vertex[1] ) # right
+                e_2 = ( mesh_vertex[2], mesh_vertex[3] ) # left
+                idx = 1
+            elif pc == 1:
+                e_1 = ( mesh_vertex[1], mesh_vertex[4] )  # right     
+                e_2 = ( mesh_vertex[3], mesh_vertex[5] )  # left edge
+                idx += 3
+            else:
+                e_1 = ( mesh_vertex[idx], mesh_vertex[idx+2] )       # right 
+                e_2 = ( mesh_vertex[idx+1], mesh_vertex[idx+3] )     # left edge
+                idx += 2
+
+                
+            # 0 is the right side
+            # 1 is the left side 
+            edges = [ e_1, e_2 ]  
+
+            #for e in edges:
+            #    BL_DEBUG.set_mark( obj_t.matrix_world @ e[0].co.xyz, kind='CUBE', scale=0.2 )
+            #    BL_DEBUG.set_mark( obj_t.matrix_world @ e[1].co.xyz, kind='SPHERE', scale=0.2 )
+
+            # calculate the nearest vertex for each point, get the minimum,
+            # and build a face using it
+            
+            class nearest:
+                def __init__(self, pos):
+                    self.pos = 'RIGHT'
+                    if pos != 0: self.pos = 'LEFT'
+                    self.face = None
+                    self.vertex = None
+                    self.distance = sys.maxsize
+
+                def __repr__(self):
+                    return "<Nearest face:%s vertex:%s distance:%5.8f pos: %s>" % (
+                        self.face, 
+                        self.vertex, 
+                        self.distance, 
+                        self.pos
+                    )
+
+            for edge_idx in range(len(edges)):
+                edge =edges[edge_idx]       
+                # for vertex0, vertex1. Pass the "left/right position"
+                near_data = [ nearest(edge_idx), nearest(edge_idx) ] 
+                bm.faces.ensure_lookup_table()
+                for i in range(len(edge)):
+                    # was sorround faces
+                    for face_idx in current_faces: 
+                        face = bm.faces[face_idx]
+
+                        # get only faces for our "side"
+                        A = obj_t.matrix_world @ edge[0].co
+                        B = obj_t.matrix_world @ edge[1].co
+                        C = obj_t.matrix_world @ face.calc_center_median()
+                        normal_vec = Vector(B-A).cross(Vector(C-A))
+                        normal_rl = normal_vec.z
+                            
+                        if near_data[i].pos == 'LEFT' and normal_rl < 0:
+                            #print("badside left: normal: ", normal_rl, near_data[i].pos, idx) 
+                            continue
+                        if near_data[i].pos == 'RIGHT' and normal_rl > 0:
+                            #print("badside right: normal: ", normal_rl, near_data[i].pos, idx) 
+                            continue
+                        
+                        #print("normal: ", normal_rl, near_data[i].pos, idx, face_idx) 
+
+                        for facevertex in face.verts:
+                            vpw = obj_t.matrix_world @ edge[i].co
+                            vtw = obj_t.matrix_world @ facevertex.co                     
+                            dist = (vpw.xyz - vtw.xyz).length
+
+                            if dist < near_data[i].distance:
+                                near_data[i].face = face_idx
+                                near_data[i].vertex = facevertex.index
+                                near_data[i].distance = dist
+
+                                # calculate the normal (first case, the we do the scond)
+
+                    
+                # select what vertex is near     
+                near = 0 
+                if near_data[1].distance < near_data[0].distance:
+                    near = 1
+                print(near_data)
+
+                #BL_DEBUG.set_mark( obj_t.matrix_world @ bm.faces[near_data[near].face].calc_center_median().xyz )
+                #BL_DEBUG.set_mark( obj_t.matrix_world @ bm.verts[near_data[near].vertex].co.xyz, kind='PLAIN_AXES')
+
+                # create a funky face here.
+                if True:
+                    if near_data[near].face != None:
+
+                        new_face = [edge[0], edge[1], bm.verts[near_data[near].vertex]]
+                        GEOM_TO_DO.append(new_face)
+                
+                # if first, or last, join vertex to end the cap
+                
+                if pc == 0 or pc == (MESH_VERTEX_LEN-1):
+                    
+                    if pc == 0:
+                        # use first
+                        edge_cap= [  edges[0][0], edges[1][0] ] # edge from right to left
+                    else:
+                        # use last
+                        edge_cap= [  edges[0][1], edges[1][1] ] # edge from right to left
+                    new_edge =bmesh.ops.contextual_create(bm, geom= edge_cap)
+                    bm.edges.index_update()
+                
+            #if idx >= 8: break
+            if LIMIT and pc >= LIMIT:
+                break
+            
+        ## do the geom
+        for new_face in GEOM_TO_DO:
+            #print(new_face)
+            #print(near)
+            newf=bmesh.ops.contextual_create(bm, geom= new_face)
+            bm.faces.index_update()
+            bm.faces.ensure_lookup_table()
+            
+            for f in newf['faces']:
+                if f.normal.z < 0:
+                    bm.faces[f.index].normal_flip()
+
 
         ##############################################################
         #
@@ -368,22 +561,3 @@ class BL_FLATTEN:
         return(("INFO", "Done"))
 
 #BL_FLATTEN.extend_terrain('Plane','Terrain')        
-
-## distances should be calculated in this way:
-
-#vp = bpy.data.objects['Plane'].data.vertices[37]
-#vt = bpy.data.meshes['Terrain'].vertices[24449]
-#vp = Vector((-33.21149826049805, -8.433300971984863, 6.760486125946045))
-#vt = Vector((-129.67138671875, -46.43072509765625, 3.25))
-# goal distance (marked by measure tool: 6.307367787950501)
-
-#vpw = bpy.data.objects['Plane'].matrix_world @ vp.co
-#vtw = bpy.data.objects['Terrain'].matrix_world @ vt.co
-
-#d1 = (vp.co.xyz - vt.co.xyz).length
-#d2 = (vpw.xyz - vtw.xyz).length ## this one!
-#d3 = (vpw.xy - vtw.xy).length # 2d
-
-#print("distance 1: ", d1)
-#print("distance 2: ", d2)
-#print("distance 3: ", d3)

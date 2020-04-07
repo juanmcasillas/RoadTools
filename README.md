@@ -152,3 +152,24 @@ how to fix elevation GPX problem
 
 # blender icons
 https://blenderartists.org/t/icon-enumeration-script-blender-2-5/491147/3
+
+# blender distance
+
+## distances should be calculated in this way:
+
+#vp = bpy.data.objects['Plane'].data.vertices[37]
+#vt = bpy.data.meshes['Terrain'].vertices[24449]
+#vp = Vector((-33.21149826049805, -8.433300971984863, 6.760486125946045))
+#vt = Vector((-129.67138671875, -46.43072509765625, 3.25))
+# goal distance (marked by measure tool: 6.307367787950501)
+
+#vpw = bpy.data.objects['Plane'].matrix_world @ vp.co
+#vtw = bpy.data.objects['Terrain'].matrix_world @ vt.co
+
+#d1 = (vp.co.xyz - vt.co.xyz).length
+#d2 = (vpw.xyz - vtw.xyz).length ## this one!
+#d3 = (vpw.xy - vtw.xy).length # 2d
+
+#print("distance 1: ", d1)
+#print("distance 2: ", d2)
+#print("distance 3: ", d3)
