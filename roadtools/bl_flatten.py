@@ -595,6 +595,207 @@ class BL_FLATTEN:
         #return(("ERROR", "Can't found terrain below the curve"))
         return(("INFO", "Done"))
 
-#BL_FLATTEN.extend_terrain('Plane','Terrain')        
-#BL_FLATTEN.add_geometry('Plane','Terrain')    
-#BL_FLATTEN.fill_holes('Terrain')    
+
+    ### new
+    def subdivide_nearest_faces(plane, terrain):
+      
+        DEBUG = False
+        LIMIT = None
+        MIN_FACE_DIST = 10
+
+        BL_DEBUG.clear_marks()
+
+        # build a table with the point and the face_idx, to speed up the thing
+        # store the vertex only one time. use raycast to the Z down to check the
+        # points, instead closest.
+        # use side points, and center
+
+        obj_s=  bpy.data.objects[plane]
+        mesh_s = obj_s.data
+        obj_t=  bpy.data.objects[terrain]
+
+        BL_DEBUG.clear_marks()
+
+        bm = bmesh.new()
+        bm.from_mesh(obj_t.data)
+        bm.verts.ensure_lookup_table()
+        bm.edges.ensure_lookup_table()
+        bm.faces.ensure_lookup_table()
+
+        # here, I can flatten or move the thing
+        #for f in  bm.faces:
+        #    if f.select:
+        #        for v in f.verts:
+        #            bm.verts[v.index].co[2] += 5
+
+        verts = []
+        mesh_vertex = []
+        for v in mesh_s.vertices:
+            verts.append(v.index)
+            mesh_vertex.append(v)
+
+        
+        current_faces = [f.index for f in bm.faces if f.select]
+
+        LIMIT = None
+        pc = 0
+        idx = 0
+        GEOM_TO_DO = []
+        MESH_VERTEX_LEN = int(len(mesh_vertex)/2)-1
+
+        # select faces & edges to subdivide
+        process_faces = {}
+
+        for pc in range(MESH_VERTEX_LEN):
+            
+            # iterate about the number of quads
+            
+            edges = []
+            if pc == 0:
+                e_1 = ( mesh_vertex[0], mesh_vertex[1] ) # right
+                e_2 = ( mesh_vertex[2], mesh_vertex[3] ) # left
+                idx = 1
+            elif pc == 1:
+                e_1 = ( mesh_vertex[1], mesh_vertex[4] )  # right     
+                e_2 = ( mesh_vertex[3], mesh_vertex[5] )  # left edge
+                idx += 3
+            else:
+                e_1 = ( mesh_vertex[idx], mesh_vertex[idx+2] )       # right 
+                e_2 = ( mesh_vertex[idx+1], mesh_vertex[idx+3] )     # left edge
+                idx += 2
+
+                
+            # 0 is the right side
+            # 1 is the left side 
+            edges = [ e_1, e_2 ]  
+
+            #for e in edges:
+            #    BL_DEBUG.set_mark( obj_t.matrix_world @ e[0].co.xyz, kind='CUBE', scale=0.2 )
+            #    BL_DEBUG.set_mark( obj_t.matrix_world @ e[1].co.xyz, kind='SPHERE', scale=0.2 )
+
+            # calculate the nearest vertex for each point, get the minimum,
+            # and build a face using it
+            
+            class nearest:
+                def __init__(self, pos):
+                    self.pos = 'RIGHT'
+                    if pos != 0: self.pos = 'LEFT'
+                    self.face = None
+                    self.vertex = None
+                    self.distance = sys.maxsize
+
+                def __repr__(self):
+                    return "<Nearest face:%s vertex:%s distance:%5.8f pos: %s>" % (
+                        self.face, 
+                        self.vertex, 
+                        self.distance, 
+                        self.pos
+                    )
+
+            for edge_idx in range(len(edges)):
+                edge =edges[edge_idx]       
+                # for vertex0, vertex1. Pass the "left/right position"
+                near_data = [ nearest(edge_idx), nearest(edge_idx) ] 
+                bm.faces.ensure_lookup_table()
+                for i in range(len(edge)):
+                    # was sorround faces
+                    for face_idx in current_faces: 
+                        face = bm.faces[face_idx]
+
+                        # get only faces for our "side"
+                        # note that I use the Plane, not the projected ones.
+
+                        A = obj_s.matrix_world @ edge[0].co
+                        B = obj_s.matrix_world @ edge[1].co
+                        C = obj_t.matrix_world @ face.calc_center_median()
+                        normal_vec = Vector(B-A).cross(Vector(C-A))
+                        normal_rl = normal_vec.z
+                            
+                        if near_data[i].pos == 'LEFT' and normal_rl < 0:
+                            #print("badside left: normal: ", normal_rl, near_data[i].pos, idx) 
+                            continue
+                        if near_data[i].pos == 'RIGHT' and normal_rl > 0:
+                            #print("badside right: normal: ", normal_rl, near_data[i].pos, idx) 
+                            continue
+                        
+                        #print("normal: ", normal_rl, near_data[i].pos, idx, face_idx) 
+
+                        # again, plane vs mes
+                        for facevertex in face.verts:
+                            vpw = obj_s.matrix_world @ edge[i].co
+                            vtw = obj_t.matrix_world @ facevertex.co                     
+                            dist = (vpw.xyz - vtw.xyz).length
+
+                            if dist < near_data[i].distance:
+                                near_data[i].face = face_idx
+                                near_data[i].vertex = facevertex.index
+                                near_data[i].distance = dist
+
+                                # calculate the normal (first case, the we do the scond)
+
+                    
+                # select what vertex is near     
+                near = 0 
+                if near_data[1].distance < near_data[0].distance:
+                    near = 1
+                
+                if not near_data[near].face in process_faces.keys():                    
+                    process_faces[near_data[near].face] = [ near_data[near].vertex ]
+                else:
+                    if not near_data[near].vertex in process_faces[near_data[near].face]:
+                        process_faces[near_data[near].face].append( near_data[near].vertex )
+
+                #BL_DEBUG.set_mark( obj_t.matrix_world @ bm.faces[near_data[near].face].calc_center_median().xyz )
+                #BL_DEBUG.set_mark( obj_t.matrix_world @ bm.verts[near_data[near].vertex].co.xyz, kind='PLAIN_AXES')
+
+                # here, I want only the face data, and vertex.
+                # create a funky face here.
+                
+            #if idx >= 8: break
+            if LIMIT and pc >= LIMIT:
+                break
+
+        # process the faces
+
+        for face_idx, verts in process_faces.items():
+            print(face_idx,"::", verts)
+
+            edges = []
+            edges_dict = {}
+            bm.faces.ensure_lookup_table()
+            for v in verts:
+                for e in bm.faces[face_idx].edges:
+                    for vv in e.verts:
+                        if vv.index == v:
+                            if e.index not in edges_dict.keys():
+                                edges.append(e)
+                                edges_dict[e.index] = True
+
+
+            if edges:
+                # just only one (better)
+                #edges = [ edges[0] ]
+                print("face ", face_idx, "edges", edges)
+                # was True, 1
+                bmesh.ops.subdivide_edges(bm, edges=edges, use_grid_fill=True, cuts=1)
+
+        ##############################################################
+        #
+        # End
+        # update the meshes
+        # free the bmesh
+        # 
+        ##############################################################  
+
+        bm.calc_loop_triangles()
+        bm.to_mesh(obj_t.data)
+        obj_t.data.update()  
+        bm.free()
+  
+        #return(("ERROR", "Can't found terrain below the curve"))
+        return(("INFO", "Done"))    
+
+#BL_FLATTEN.extend_terrain('Plane','Terrain')
+#BL_FLATTEN.subdivide_nearest_faces('Plane','Terrain')
+#BL_FLATTEN.add_geometry('Plane','Terrain')
+#BL_FLATTEN.fill_holes('Terrain')
