@@ -173,3 +173,35 @@ https://blenderartists.org/t/icon-enumeration-script-blender-2-5/491147/3
 #print("distance 1: ", d1)
 #print("distance 2: ", d2)
 #print("distance 3: ", d3)
+
+## call OSM
+>>> bpy.context.scene.blender_osm.dataType = 'osm'
+>>> bpy.ops.blender_osm.import_data()
+
+>>> print(bpy.context.scene.blender_osm.maxLat) # top
+40.33190155029297
+
+>>> print(bpy.context.scene.blender_osm.minLon) # left
+-4.598810195922852
+
+>>> print(bpy.context.scene.blender_osm.maxLon) # right
+-4.514009952545166
+
+>>> print(bpy.context.scene.blender_osm.minLat) # bottom
+40.28369903564453
+
+
+import bpy
+
+def download_terrain_osm( top, left, right, bottom, kind='terrain'):
+    bpy.context.scene.blender_osm.dataType = kind
+    bpy.context.scene.blender_osm.maxLat = top
+    bpy.context.scene.blender_osm.minLon = left
+    bpy.context.scene.blender_osm.maxLon = right
+    bpy.context.scene.blender_osm.minLat = bottom
+    bpy.ops.blender_osm.import_data()
+
+#download_terrain_osm(40.324347,-4.588443,-4.566994,40.297759)
+#download_terrain_osm(40.335921, -4.849929,-4.805058,40.253744)
+## extender
+download_terrain_osm(40.344927,-4.854437,-4.800551,40.244738)

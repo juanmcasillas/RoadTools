@@ -2,3 +2,4 @@ osm
 *.blend1
 __pycache__
 *.pyc
+blender_addons
