@@ -6,7 +6,44 @@ import sys
 
 from bl_utils import BL_DEBUG,BL_UTILS,BL_ROAD_UTILS
 
+# some utils
+
+
+
+
+
 class BL_FLATTEN:
+
+    class nearest:
+        def __init__(self, pos):
+            self.pos = 'RIGHT'
+            if pos != 0: self.pos = 'LEFT'
+            self.face = None
+            self.vertex = None
+            self.edges = []
+            self.distance = sys.maxsize
+
+        def __repr__(self):
+            return "<Nearest face:%s vertex:%s edges:%s distance:%5.8f pos: %s>" % (
+                self.face, 
+                self.vertex, 
+                self.edges,
+                self.distance, 
+                self.pos
+            )
+
+    def face_edges_by_vert(face, vert):
+        "given a face, return all the edges that have the given vert index"
+        r = []
+        idx = vert.index if isinstance(vert, bmesh.types.BMVert) else vert
+        #print("-------")
+        for e in face.edges:
+            for v in e.verts:
+                #print(face, e, v, idx)
+                if v.index == idx:
+                    r.append(e.index)
+        return(r)
+
     def __init__(self):
         pass
 
@@ -114,7 +151,6 @@ class BL_FLATTEN:
 
 
         obj_s=  bpy.data.objects[plane]
-        mesh_s = obj_s.data
         obj_t=  bpy.data.objects[terrain]
     
 
@@ -166,10 +202,6 @@ class BL_FLATTEN:
         for f in ret_trig['faces']:
                 f.select = True
                
-        selected_faces = ret_trig['faces']
-
-        sorround_faces = [f.index for f in bm.faces if f.select]
-            
     
         # 0. at this point, faces are triangulated, and selected
  
@@ -267,24 +299,6 @@ class BL_FLATTEN:
         # delete the result faces        
         bmesh.ops.delete(bm, geom=list(faces_to_delete.values()), context='FACES_KEEP_BOUNDARY') # FACES_ONLY
 
-
-
-
-
-        # remove from selected_faces faces_to_delete, in order to work 
-        # with them right now.
-
-        #sorround_faces_tmp = []
-        #current_faces = [face.index for face in bm.faces]
-
-        #for face_idx in sorround_faces:
-        #    if face_idx not in faces_to_delete.keys() and face_idx in current_faces:
-        #        #print("face_idx is not deleted", face_idx)
-        #        sorround_faces_tmp.append(face_idx)
-
-        #sorround_faces = sorround_faces_tmp
-        #print("faces!")
-        #print(sorround_faces)
 
         ##############################################################
         #
@@ -464,26 +478,10 @@ class BL_FLATTEN:
             # calculate the nearest vertex for each point, get the minimum,
             # and build a face using it
             
-            class nearest:
-                def __init__(self, pos):
-                    self.pos = 'RIGHT'
-                    if pos != 0: self.pos = 'LEFT'
-                    self.face = None
-                    self.vertex = None
-                    self.distance = sys.maxsize
-
-                def __repr__(self):
-                    return "<Nearest face:%s vertex:%s distance:%5.8f pos: %s>" % (
-                        self.face, 
-                        self.vertex, 
-                        self.distance, 
-                        self.pos
-                    )
-
             for edge_idx in range(len(edges)):
                 edge =edges[edge_idx]       
                 # for vertex0, vertex1. Pass the "left/right position"
-                near_data = [ nearest(edge_idx), nearest(edge_idx) ] 
+                near_data = [ BL_FLATTEN.nearest(edge_idx), BL_FLATTEN.nearest(edge_idx) ] 
                 bm.faces.ensure_lookup_table()
                 for i in range(len(edge)):
                     # was sorround faces
@@ -545,7 +543,7 @@ class BL_FLATTEN:
                     else:
                         # use last
                         edge_cap= [  edges[0][1], edges[1][1] ] # edge from right to left
-                    new_edge =bmesh.ops.contextual_create(bm, geom= edge_cap)
+                    bmesh.ops.contextual_create(bm, geom= edge_cap)
                     bm.edges.index_update()
                 
             #if idx >= 8: break
@@ -640,11 +638,10 @@ class BL_FLATTEN:
         LIMIT = None
         pc = 0
         idx = 0
-        GEOM_TO_DO = []
         MESH_VERTEX_LEN = int(len(mesh_vertex)/2)-1
 
         # select faces & edges to subdivide
-        process_faces = {}
+        process_vertex = []
 
         for pc in range(MESH_VERTEX_LEN):
             
@@ -676,26 +673,12 @@ class BL_FLATTEN:
             # calculate the nearest vertex for each point, get the minimum,
             # and build a face using it
             
-            class nearest:
-                def __init__(self, pos):
-                    self.pos = 'RIGHT'
-                    if pos != 0: self.pos = 'LEFT'
-                    self.face = None
-                    self.vertex = None
-                    self.distance = sys.maxsize
 
-                def __repr__(self):
-                    return "<Nearest face:%s vertex:%s distance:%5.8f pos: %s>" % (
-                        self.face, 
-                        self.vertex, 
-                        self.distance, 
-                        self.pos
-                    )
 
             for edge_idx in range(len(edges)):
                 edge =edges[edge_idx]       
                 # for vertex0, vertex1. Pass the "left/right position"
-                near_data = [ nearest(edge_idx), nearest(edge_idx) ] 
+                near_data = [ BL_FLATTEN.nearest(edge_idx), BL_FLATTEN.nearest(edge_idx) ] 
                 bm.faces.ensure_lookup_table()
                 for i in range(len(edge)):
                     # was sorround faces
@@ -720,7 +703,7 @@ class BL_FLATTEN:
                         
                         #print("normal: ", normal_rl, near_data[i].pos, idx, face_idx) 
 
-                        # again, plane vs mes
+                        # again, plane vs mesh
                         for facevertex in face.verts:
                             vpw = obj_s.matrix_world @ edge[i].co
                             vtw = obj_t.matrix_world @ facevertex.co                     
@@ -730,7 +713,7 @@ class BL_FLATTEN:
                                 near_data[i].face = face_idx
                                 near_data[i].vertex = facevertex.index
                                 near_data[i].distance = dist
-
+                                #near_data[i].edges = BL_FLATTEN.face_edges_by_vert(face, facevertex) 
                                 # calculate the normal (first case, the we do the scond)
 
                     
@@ -739,11 +722,27 @@ class BL_FLATTEN:
                 if near_data[1].distance < near_data[0].distance:
                     near = 1
                 
-                if not near_data[near].face in process_faces.keys():                    
-                    process_faces[near_data[near].face] = [ near_data[near].vertex ]
-                else:
-                    if not near_data[near].vertex in process_faces[near_data[near].face]:
-                        process_faces[near_data[near].face].append( near_data[near].vertex )
+                # now, build the array to work with. Store unique faces
+                
+               
+              
+                
+                process_vertex.append(near_data[near].vertex)
+                # if not vertex_idx in process_faces.keys():                    
+                #     process_vertex[face_idx] =  [ vertex_idx ]
+                # else:
+                #     # now, store vertex and edge info.
+                #     if not vertex_idx in process_faces[face_idx]:
+                #         process_faces[face_idx].append(vertex_idx)
+
+                #     else:
+                #         # vertex exist on face, so test the edge.
+                #         for edge_idx in near_data[near].edges:
+                #             if not edge_idx in process_faces[face_idx][vertex_idx]:
+                #                 process_faces[face_idx][vertex_idx].append(edge_idx)
+                #             else:
+                #                 # duplicate.
+                #                 pass
 
                 #BL_DEBUG.set_mark( obj_t.matrix_world @ bm.faces[near_data[near].face].calc_center_median().xyz )
                 #BL_DEBUG.set_mark( obj_t.matrix_world @ bm.verts[near_data[near].vertex].co.xyz, kind='PLAIN_AXES')
@@ -755,29 +754,25 @@ class BL_FLATTEN:
             if LIMIT and pc >= LIMIT:
                 break
 
-        # process the faces
+        # I get all the "nearest" vertex
+        # look in current_faces faces all the edges, and 
+        bm.faces.ensure_lookup_table()
 
-        for face_idx, verts in process_faces.items():
-            print(face_idx,"::", verts)
+        process_vertex = list(set(process_vertex))
+        active_faces = [ bm.faces[i] for i in current_faces ]
+        active_edges = [ ]
+        for f in active_faces:
+            active_edges += f.edges
 
-            edges = []
-            edges_dict = {}
-            bm.faces.ensure_lookup_table()
-            for v in verts:
-                for e in bm.faces[face_idx].edges:
-                    for vv in e.verts:
-                        if vv.index == v:
-                            if e.index not in edges_dict.keys():
-                                edges.append(e)
-                                edges_dict[e.index] = True
+        for edge in active_edges:
+            # check that all the vertex are in process_vertex.
+            vertex_inside = 0
+            for v in edge.verts:
+                if v.index in process_vertex:
+                    vertex_inside += 1
 
-
-            if edges:
-                # just only one (better)
-                #edges = [ edges[0] ]
-                print("face ", face_idx, "edges", edges)
-                # was True, 1
-                bmesh.ops.subdivide_edges(bm, edges=edges, use_grid_fill=True, cuts=1)
+            if vertex_inside == len(edge.verts):
+                bmesh.ops.subdivide_edges(bm, edges=[edge], use_grid_fill=False, cuts=1)
 
         ##############################################################
         #
