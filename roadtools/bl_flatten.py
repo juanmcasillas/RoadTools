@@ -537,16 +537,16 @@ class BL_FLATTEN:
                 
                 # if first, or last, join vertex to end the cap
                 
-                if pc == 0 or pc == (MESH_VERTEX_LEN-1):
-                    
-                    if pc == 0:
-                        # use first
-                        edge_cap= [  edges[0][0], edges[1][0] ] # edge from right to left
-                    else:
-                        # use last
-                        edge_cap= [  edges[0][1], edges[1][1] ] # edge from right to left
-                    bmesh.ops.contextual_create(bm, geom= edge_cap)
-                    bm.edges.index_update()
+            if pc == 0 or pc == (MESH_VERTEX_LEN-1):
+                
+                if pc == 0:
+                    # use first
+                    edge_cap= [  edges[0][0], edges[1][0] ] # edge from right to left
+                else:
+                    # use last
+                    edge_cap= [  edges[0][1], edges[1][1] ] # edge from right to left
+                bmesh.ops.contextual_create(bm, geom= edge_cap)
+                bm.edges.index_update()
                 
             #if idx >= 8: break
             if LIMIT and pc >= LIMIT:
