@@ -17,6 +17,8 @@ from bl_tools import BL_TOOLS
 class BL_HOLEMAKER:
     def __init__(self, plane, terrain, DEBUG=False, LIMIT=None):
 
+        self.time_it = BL_TOOLS.TimeIt()
+
         self.DEBUG=DEBUG
         self.LIMIT=LIMIT
 
@@ -25,26 +27,34 @@ class BL_HOLEMAKER:
         self.obj_s  =  bpy.data.objects[plane]
         self.mesh_s = self.obj_s.data    
         self.obj_t  =  bpy.data.objects[terrain]
-        
 
         r = BL_TOOLS.plane_to_vertex(self.plane, calc_centers=True)
 
         self.plane_points = r['points']
         self.plane_edges = r['edges']
+        
         self.raycast_points =  BL_TOOLS.get_raycast(self.plane, self.terrain, 
                                     vertices = self.plane_points,
                                     DEBUG=self.DEBUG, LIMIT=self.LIMIT)
     
+        self.bm = bmesh.new()
+        self.bm.from_mesh(self.obj_t.data)
+        self.bm.verts.ensure_lookup_table()
+        self.bm.edges.ensure_lookup_table()
+        self.bm.faces.ensure_lookup_table()
 
-    def update_bm(self, freeit=True):
+        self.time_it.stop()
+        print("[t] __init__(): ", self.time_it)
+
+    def update_bm(self, freeit=False):
         "update the blender mesh"
              
         bpy.context.view_layer.update()
         self.bm.calc_loop_triangles()
         self.bm.to_mesh(self.obj_t.data)
         self.obj_t.data.update()  
-        bpy.ops.object.mode_set(mode = 'OBJECT')                 
-        bpy.ops.object.mode_set(mode = 'EDIT')   
+        #bpy.ops.object.mode_set(mode = 'OBJECT')                 
+        #bpy.ops.object.mode_set(mode = 'EDIT')   
 
         if freeit: self.bm.free()
 
@@ -63,6 +73,8 @@ class BL_HOLEMAKER:
     def do_holes(self):
         "get the plane, generate the info to raycast in the grid, select the matching faces"
         
+        self.time_it = BL_TOOLS.TimeIt()
+
         EXTEND_SELECTION = True
         TRIANGULATE_FACES = False # True
         SUBDIVIDE_INNER_FACES = False
@@ -75,14 +87,6 @@ class BL_HOLEMAKER:
 
         # at this point XD point_data has 
         # terrain_up/down, face_index, point, location)
-
-        BL_DEBUG.clear_marks()
-
-        self.bm = bmesh.new()
-        self.bm.from_mesh(self.obj_t.data)
-        self.bm.verts.ensure_lookup_table()
-        self.bm.edges.ensure_lookup_table()
-        self.bm.faces.ensure_lookup_table()
               
         self.unselect_all()
 
@@ -143,7 +147,7 @@ class BL_HOLEMAKER:
         # 
         ##############################################################
    
-        self.update_bm(freeit=False)
+        self.update_bm()
 
         #self.bm.verts.ensure_lookup_table()
         #self.bm.edges.ensure_lookup_table()
@@ -242,9 +246,9 @@ class BL_HOLEMAKER:
 
             print("Inner edges Subdivide: %d" % (len(new_edges)*2) )
 
-        self.update_bm(freeit=False)
+        self.update_bm()
 
-        if CALCULATE_NEAR_FACES:
+        if False:
             faces_to_delete = {}
             verts_to_delete = {}
             edges_to_delete = {}
@@ -277,7 +281,7 @@ class BL_HOLEMAKER:
             edges_to_delete = list(edges_to_delete.values())
             bmesh.ops.delete(self.bm, geom=verts_to_delete + edges_to_delete + faces_to_delete, context='FACES') # FACES_ONLY
 
-        self.update_bm(freeit=False)
+        self.update_bm()
 
         # now, just select the faces that are not select, but are in the edges.
         # also select all the vertex in the keep edges that are not selected by default.
@@ -298,16 +302,72 @@ class BL_HOLEMAKER:
         #
         # End
         # update the meshes
-        # free the bmesh
         # 
         ##############################################################  
 
+        self.time_it.stop()
         self.update_bm()
-  
+
+        print("[t] do_holes(): ", self.time_it)
+
+        
         #return(("ERROR", "Can't found terrain below the curve"))
         return(("INFO", "Done"))        
+
+
+    # ####################################################################################################
+    #
+    # add_geometry
+    # project the plane points into the mesh. 
+    #
+    # ####################################################################################################
+
+    def add_geometry(self):
+        
+        self.time_it = BL_TOOLS.TimeIt()
+        
+        BL_DEBUG.clear_marks()
+        self.bm.verts.ensure_lookup_table()
+        self.bm.edges.ensure_lookup_table()
+        self.bm.faces.ensure_lookup_table()
+
+        # here, I can flatten or move the thing
+        #for f in  bm.faces:
+        #    if f.select:
+        #        for v in f.verts:
+        #            bm.verts[v.index].co[2] += 5
+
+
+        self.mesh_vertex = []
+        verts = []
+        for edge in self.plane_edges:
+            e_1 = edge[0]    
+            e_2 = edge[1]
+            verts += [v.index for v in e_1] + [v.index for v in e_2]
+
+            #print(e_1,e_2)
+        for v_idx in verts:
+            world_point = self.obj_s.matrix_world @ self.mesh_s.vertices[v_idx].co
+            local_point = self.obj_t.matrix_world.inverted() @ world_point
+
+            #set_mark( obj_s.matrix_world @ obj_s.data.vertices[v_idx].co, kind='PLAIN_AXES', scale=0.2 )
+            #set_mark( obj_t.matrix_world @ local_point,  scale=0.2 )
+            
+            vnew = self.bm.verts.new( local_point )
+            self.mesh_vertex.append(vnew)
+
+        # update the index of the new created verts. WTF ???
+        self.update_bm()
+        self.time_it.stop()
+        print("[t] add_geometry(): ", self.time_it)
+        #return(("ERROR", "Can't found terrain below the curve"))
+        return(("INFO", "Done"))
+
 
 
 if True:
     tool = BL_HOLEMAKER('Plane','Terrain')
     tool.do_holes()
+    tool.add_geometry()
+    tool.update_bm(freeit=True)
+    

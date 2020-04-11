@@ -11,11 +11,36 @@ from mathutils import Vector, Matrix, Euler
 from math import radians
 import bmesh   
 import sys
+import time
+
 
 from bl_utils import BL_DEBUG
 
 
 class BL_TOOLS:
+
+    class TimeIt:
+        def __init__(self):
+            self.t_start = time.time()
+            self.t_stop = None
+
+        def stop(self):
+            self.t_stop = time.time()
+            self.t_delta = self.t_stop - self.t_start
+
+        def convert(self, seconds): 
+            min, sec = divmod(seconds, 60) 
+            hour, min = divmod(min, 60) 
+            return "%d:%02d:%03.2f" % (hour, min, sec) 
+
+        def __repr__(self):
+            s_start = time.strftime('%H:%M:%S', time.localtime(self.t_start))
+            s_stop = time.strftime('%H:%M:%S', time.localtime(self.t_stop))
+            s_delta = self.convert(self.t_delta)
+            s = "start=%s stop=%s delta=%s" % (s_start, s_stop, s_delta)
+            return(s)
+
+
 
     class DummyVector:
         "to add the .co attribute and work as a vertex"
