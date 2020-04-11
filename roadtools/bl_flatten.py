@@ -14,6 +14,12 @@ from bl_utils import BL_DEBUG,BL_UTILS,BL_ROAD_UTILS
 
 class BL_FLATTEN:
 
+
+    class DummyVector:
+        "to add the .co attribute and work as a vertex"
+        def __init__(self,v):
+            self.co = v
+
     class nearest:
         def __init__(self, pos):
             self.pos = 'RIGHT'
@@ -34,6 +40,12 @@ class BL_FLATTEN:
                 self.pos
             )
 
+    # ####################################################################################################
+    #
+    # face_edges_by_vert
+    #
+    # ####################################################################################################
+    
     def face_edges_by_vert(face, vert):
         "given a face, return all the edges that have the given vert index"
         r = []
@@ -49,14 +61,26 @@ class BL_FLATTEN:
     def __init__(self):
         pass
 
-    def get_raycast(plane, terrain, DEBUG, LIMIT):
+
+    # ####################################################################################################
+    #
+    # get_raycast
+    #
+    # ####################################################################################################
+
+
+    def get_raycast(plane, terrain, vertices=None, DEBUG=False, LIMIT=None):
 
         obj_s=  bpy.data.objects[plane]
         mesh_s = obj_s.data    
         point_data = []
         pc = 0
+        
+        vertices = vertices if vertices else mesh_s.vertices
+
+        for v in vertices:
         #for p in mesh_s.polygons:
-        for v in mesh_s.vertices:
+    
             # first point, first vert, is 0.
             # skip center in quads
             #check_points = [ ("c_%d" % p.index, p.center) ]
@@ -113,33 +137,86 @@ class BL_FLATTEN:
             if r_object.name == terrain:
                 #found_dict[key] = True
                 point_data.append( (terrain_down, index, v, location )) # terrain is down, faceindex, point
-            #else:
-            #    pass
-                #point_data.append( (terrain_down, index, v, location ))
-                # insert a fake point, but use face index 
-                # don't know what I'm going to do with that.
-                #_,index,_,_ = point_data[-1]
-                #point_data.append( (None, index, v, None )) # fake point
+
 
             pc +=1
             if LIMIT and pc / 4 >= LIMIT:
                 break
 
-        #for terrain_down, faceindex, p in point_data:
-            #print(terrain_down, faceindex, p)
-        #    BL_DEBUG.set_mark(obj_s.matrix_world  @ p.xyz)
-        print("extend_terrain Total/Calculated Points/Polys (Quads) %d/%d/%d" % (len(mesh_s.vertices),len(point_data), int(pc / 4)))        
+        print("ray_cast Total/Calculated Points/Polys (Quads) %d/%d/%d" % (len(mesh_s.vertices),len(point_data), int(pc / 4)))        
         return(point_data)
 
 
+    # ####################################################################################################
+    #
+    # plane_to_vertex get the list of plane, create a mesh and iterate the vertex as planes
+    #
+    # ####################################################################################################
+
+    def plane_to_vertex(plane):
+        "get the vertices for plane, generate a list of all vertices as a face and calculate two median points at side"
+        
+        obj_s=  bpy.data.objects[plane]
+        mesh_s = obj_s.data   
+
+        pc = 0
+        idx = 0
+        MESH_VERTEX_LEN = int(len(mesh_s.vertices)/2)-1
+
+        geom_edges = []
+        geom_faces = []
+        all_points = []
+        for pc in range(MESH_VERTEX_LEN):
+            
+            # iterate about the number of quads
+            
+            edges = []
+            if pc == 0:
+                e_1 = [ mesh_s.vertices[0], mesh_s.vertices[1] ] # right
+                e_2 = [ mesh_s.vertices[2], mesh_s.vertices[3] ] # left
+                idx = 1
+            elif pc == 1:
+                e_1 = [ mesh_s.vertices[1], mesh_s.vertices[4] ]  # right     
+                e_2 = [ mesh_s.vertices[3], mesh_s.vertices[5] ]  # left edge
+                idx += 3
+            else:
+                e_1 = [ mesh_s.vertices[idx], mesh_s.vertices[idx+2] ]       # right 
+                e_2 = [ mesh_s.vertices[idx+1], mesh_s.vertices[idx+3] ]     # left edge
+                idx += 2
+
+                
+            # 0 is the right side
+            # 1 is the left side 
+            edges = [ e_1, e_2 ]  
+            
+            # calculate the center of the edges, so we have more points and avoid the "half split"
+            # problem in the face selector
+
+
+            c1 = BL_FLATTEN.DummyVector(e_1[0].co + (e_1[1].co - e_1[0].co)/2)
+            c2 = BL_FLATTEN.DummyVector(e_2[0].co + (e_2[1].co - e_2[0].co)/2)
+            c3 = BL_FLATTEN.DummyVector(e_1[0].co + (e_2[1].co - e_1[0].co)/2)
+            c4 = BL_FLATTEN.DummyVector(e_2[0].co + (e_1[1].co - e_2[0].co)/2)
+
+            all_points += [item for sublist in edges for item in sublist] + [c1, c2, c3, c4]
+        
+        return all_points
 
 
 
-
+    # ####################################################################################################
+    #
+    # extend_terrain
+    #
+    # ####################################################################################################
 
     def extend_terrain(plane, terrain):
         """try to flatten a terrain, using the plane as reference plane must have ALL modifiers APPLIED"""
-        
+
+        EXTEND_TERRAIN = True
+        TRIANGULATE = True
+        EXTEND_DELETE_SELECTION = False
+
         DEBUG = False
         LIMIT = None
         MIN_FACE_DIST = 10
@@ -151,14 +228,13 @@ class BL_FLATTEN:
         # points, instead closest.
         # use side points, and center
 
-
         obj_s=  bpy.data.objects[plane]
         obj_t=  bpy.data.objects[terrain]
-    
+        vertices_to_raycast = BL_FLATTEN.plane_to_vertex(plane)
 
-        #for p in mesh_s.polygons:
-
-        point_data = BL_FLATTEN.get_raycast(plane,terrain, DEBUG, LIMIT)
+        point_data = BL_FLATTEN.get_raycast(plane, terrain, 
+                                    vertices = vertices_to_raycast,
+                                    DEBUG=DEBUG, LIMIT=LIMIT)
         
         # at this point XD point_data has 
         # terrain_up/down, face_index, point, location)
@@ -177,6 +253,7 @@ class BL_FLATTEN:
         for edge in bm.edges: edge.select = False
 
         # select faces tracked
+  
         for point in point_data:
             terrain_down, index, point, location = point
             bm.faces[index].select = True
@@ -190,21 +267,38 @@ class BL_FLATTEN:
         sel_faces = [f for f in bm.faces if f.select]
         #geom = sel_verts + sel_edges + sel_faces
         geom = sel_faces
+        
+        if EXTEND_TERRAIN:
+            ret_geom =  bmesh.ops.region_extend(bm, geom=geom,use_faces=True, use_face_step=False,use_contract=False)
+            for f in ret_geom['geom']:
+                if isinstance(f, bmesh.types.BMFace):
+                    f.select = True
 
-        ret_geom =  bmesh.ops.region_extend(bm, geom=geom,use_faces=True, use_face_step=False,use_contract=False)
-        for f in ret_geom['geom']:
-            if isinstance(f, bmesh.types.BMFace):
-                f.select = True
+        if False:
+            # subdivide too soon.
+            sel_faces = [f for f in bm.faces if f.select]
+            face_edges = []
+            for f in sel_faces:
+                for e in f.edges:
+                    face_edges.append(e.index)
+            face_edges = list(set(face_edges))
+            face_edges_geom = [bm.edges[i] for i in face_edges]
+            ret = bmesh.ops.subdivide_edges(bm, edges=face_edges_geom, cuts=2, use_grid_fill=True)
+            for f in ret['geom']:
+                if isinstance(f, bmesh.types.BMFace):
+                    f.select = True
 
-        geom = [f for f in bm.faces if f.select]
-        ret_trig = bmesh.ops.triangulate(bm, faces=geom)        
+        if True:
+            #triangulate
+            geom = [f for f in bm.faces if f.select]
+            ret_trig = bmesh.ops.triangulate(bm, faces=geom)        
+            # select the new created triangles
 
-        # select the new created triangles
-
-        for f in ret_trig['faces']:
-                f.select = True
+            for f in ret_trig['faces']:
+                    f.select = True
                
-    
+
+
         # 0. at this point, faces are triangulated, and selected
  
         ##############################################################
@@ -231,8 +325,11 @@ class BL_FLATTEN:
         bpy.ops.object.mode_set(mode = 'OBJECT')                 
         bpy.ops.object.mode_set(mode = 'EDIT')                 
                 
-        point_data = BL_FLATTEN.get_raycast(plane, terrain, DEBUG, LIMIT)
 
+        point_data = BL_FLATTEN.get_raycast(plane, terrain, 
+                                    vertices = vertices_to_raycast,
+                                    DEBUG=DEBUG, LIMIT=LIMIT)
+        
         # at this point XD point_data has 
         # terrain_up/down, face_index, point, location)
         
@@ -240,17 +337,20 @@ class BL_FLATTEN:
 
         faces_to_delete = {}
         
-        ###tmpremove
-        ###for face in selected_faces: bm.faces[face.index].select = False
-        
+        ##selected_faces = [f for f in bm.faces if f.select]
+        ##for f in bm.faces: f.select = False
+
+
         for item in point_data:
-                terrain_down, index, point, location = item
-                #print(terrain_down,index, point, location)
-                #BL_DEBUG.set_mark( obj_t.matrix_world @ location.xyz, kind="PLAIN_AXES" )
+            terrain_down, index, point, location = item
+            #print(terrain_down,index, point, location)
+            #BL_DEBUG.set_mark( obj_t.matrix_world @ location.xyz, kind="PLAIN_AXES" )
 
-                if index not in faces_to_delete.keys():
-                    faces_to_delete[index] = bm.faces[index]
+            if index not in faces_to_delete.keys():
+                faces_to_delete[index] = bm.faces[index]
 
+            if True:
+                # this calc takes TOO much in compute
                 # select the bounding faces.
                 local_faces =  bmesh.ops.region_extend(
                     bm, 
@@ -265,31 +365,31 @@ class BL_FLATTEN:
                 # distance = 10m
                 for f in local_faces['geom']:
                     if isinstance(f, bmesh.types.BMFace) and f.index not in faces_to_delete.keys():
-                
+                        #center = BL_FLATTEN.DummyVector(f.calc_center_median())
                         for fv in f.verts:
+                        #for fv in [center]:
                             vpw = obj_s.matrix_world @ point.co
                             vtw = obj_t.matrix_world @ fv.co
                             dist = (vpw.xy - vtw.xy).length
                             if dist < MIN_FACE_DIST:
-                                #print("Face too near: ",f.index,dist)
+                                print("Face too near: ",f.index,dist)
                                 faces_to_delete[f.index] = bm.faces[f.index]
 
-        # extend the selection
+        ##for f in selected_faces: f.select = True
 
-        EXTEND_SELECTION = False
-        if EXTEND_SELECTION:
+        # extend the selection for faces to be removed.
+
+        EXTEND_DELETE_SELECTION = False
+        if EXTEND_DELETE_SELECTION:
 
             for face in bm.faces: face.select = False
-            #for vert in bm.verts: vert.select = False
-            #for edge in bm.edges: edge.select = False        
-
+ 
             for f in faces_to_delete.keys():
                 bm.faces[f].select = True        
 
             #sel_verts = [v for v in bm.verts if v.select]
             #sel_edges = [e for e in bm.edges if e.select]
             sel_faces = [f for f in bm.faces if f.select]
-            #geom = sel_verts + sel_edges + sel_faces
             geom = sel_faces
 
             ret_geom =  bmesh.ops.region_extend(bm, geom=geom,use_faces=True, use_face_step=False,use_contract=False)
@@ -297,84 +397,31 @@ class BL_FLATTEN:
                 if isinstance(f, bmesh.types.BMFace):
                     faces_to_delete[f.index] = bm.faces[f.index]
 
-        
+
         # delete the result faces        
-        bmesh.ops.delete(bm, geom=list(faces_to_delete.values()), context='FACES_KEEP_BOUNDARY') # FACES_ONLY
 
+        faces_to_delete = list(faces_to_delete.values())
+        deleted_geom_edges = []
+        for f in faces_to_delete:
+            deleted_geom_edges += [e for e in f.edges]
 
-        ##############################################################
-        #
-        # 3. Some tests. Disabled
-        # 
-        ##############################################################  
+        bmesh.ops.delete(bm, geom=faces_to_delete, context='FACES_KEEP_BOUNDARY') # FACES_ONLY
 
+        # this creates a subdivision of the inner vertex.
         if False:
+            # subdivide existing edges
+            keep_edges = []
+            for edge in deleted_geom_edges:
+                if edge.is_valid:
+                    keep_edges.append(edge)
 
-            #
-            # test test test
-            # this method triangulates the face selected.
-            # demo, don't use it for now.
-            #
-            for item in point_data:
-                terrain_down, index, point, location = item
-                BL_DEBUG.set_mark(obj_s.matrix_world @ point.co.xyz, kind="PLAIN_AXES")
-                BL_DEBUG.set_mark(location, kind="CUBE")
-                BL_UTILS.triangulate_face_quad(bm, index)
-                
-            #
-            # test test test
-            # this calculates the nearest point, and moves the 
-            # vertex to the height of the point
-            #
-            
-            sel_faces = [f for f in bm.faces if f.select]
-            sel_verts = []
-            for f in sel_faces:
-                sel_verts += f.verts
-
-            #
-            # delete all the empties
-            #
-
-            BL_DEBUG.clear_marks()
-
-            for item in point_data:
-                terrain_down, index, point, location = item
-                
-                shortest = None
-                shortestDist = 99999999999999
-
-                for v in sel_verts: #go throught all vertices ... in the selected faces!
-                    dist = (Vector( v.co.xyz ) - location).length  #calculate the distance
-                    #print(dist)
-                    if dist < shortestDist : #test if better so far
-                        shortest = v
-                        shortestDist = dist
-                
-                if shortest:
-                    BL_DEBUG.set_mark(obj_s.matrix_world @ point.co.xyz, kind="PLAIN_AXES")
-                    BL_DEBUG.set_mark(location, kind="CUBE")
-                    BL_DEBUG.set_mark(shortest.co.xyz, kind="SPHERE")
-                    ##dist = (Vector( obj_s.matrix_world @ point.co.xyz ) - obj_t.matrix_world @ shortest.co.xyz).length
-                    ##!z
-                    #p1 = obj_s.matrix_world @ point.co.xyz
-                    #p2 = obj_t.matrix_world @ shortest.co.xyz               
-                    # dist =  point.co.z - shortest.co.z
-                    shortest.co[2] = point.co.z
-
-                    connected_verts = {}
-                    marked_edges = []
-                    print("---")
-                    BL_FLATTEN.findConnectedVerts(shortest.index, bm, connected_verts, marked_edges, maxdepth=1)
-                    # print(",".join([str(v) for v in connected_verts.keys()]))
-                    for near in connected_verts.keys():
-                        print("near", near)
-                        near.co[2] = point.co.z
-                        BL_DEBUG.set_mark(near.co.xyz)
-
-                    #print(shortest, shortest.index, shortest.co)
-                    #bmesh.ops.translate(bm, verts=[shortest], vec= (dist) * shortest.normal)   
-
+            new_edges = []
+            geom_created = bmesh.ops.subdivide_edges(bm, edges=keep_edges, cuts=1, use_grid_fill=False)
+            for item in geom_created['geom_split']:
+                if isinstance(item, bmesh.types.BMEdge):
+                    #item.select = True
+                    #print(item.index)
+                    new_edges.append(item)
 
         ##############################################################
         #
@@ -391,6 +438,13 @@ class BL_FLATTEN:
   
         #return(("ERROR", "Can't found terrain below the curve"))
         return(("INFO", "Done"))
+
+
+    # ####################################################################################################
+    #
+    # add_geometry
+    #
+    # ####################################################################################################
 
 
     def add_geometry(plane, terrain):
@@ -580,6 +634,12 @@ class BL_FLATTEN:
         #return(("ERROR", "Can't found terrain below the curve"))
         return(("INFO", "Done"))
 
+    # ####################################################################################################
+    #
+    # fill_holes
+    #
+    # ####################################################################################################
+
     def fill_holes(terrain,sides=6):
         obj_t=  bpy.data.objects['Terrain']
         bm = bmesh.new()
@@ -595,8 +655,12 @@ class BL_FLATTEN:
         #return(("ERROR", "Can't found terrain below the curve"))
         return(("INFO", "Done"))
 
+    # ####################################################################################################
+    #
+    # subdivide_nearest_faces
+    #
+    # ####################################################################################################
 
-    ### new
     def subdivide_nearest_faces(plane, terrain):
       
         DEBUG = False
@@ -792,9 +856,12 @@ class BL_FLATTEN:
         #return(("ERROR", "Can't found terrain below the curve"))
         return(("INFO", "Done"))    
 
+    # ####################################################################################################
+    #
+    # move_points
+    #
+    # ####################################################################################################
 
-    # move the points near the curve
-    ### new
     def move_points(plane, terrain):
       
         DEBUG = False

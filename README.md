@@ -205,3 +205,9 @@ def download_terrain_osm( top, left, right, bottom, kind='terrain'):
 #download_terrain_osm(40.335921, -4.849929,-4.805058,40.253744)
 ## extender
 download_terrain_osm(40.344927,-4.854437,-4.800551,40.244738)
+
+
+# grid
+
+x =23.5m
+y =31m
