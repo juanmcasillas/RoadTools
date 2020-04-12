@@ -41,7 +41,6 @@ class BL_TOOLS:
             return(s)
 
 
-
     class DummyVector:
         "to add the .co attribute and work as a vertex"
         def __init__(self,v):

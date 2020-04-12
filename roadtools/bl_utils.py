@@ -10,8 +10,7 @@ from mathutils import Vector, Matrix, Euler
 from math import radians
 import bmesh
 from itertools import islice
-
-
+import copy
 
 class BL_DEBUG:
     def __init__(self):
@@ -126,6 +125,29 @@ class BL_UTILS:
         bm.verts.index_update()
         bm.faces.index_update()
 
+    # ####################################################################################################
+    #
+    # AssembleOverrideContextForView3dOps
+    # override the enviroment so knife_project can be run on python script
+    #
+    # ####################################################################################################
+    def AssembleOverrideContextForView3dOps():
+        #=== Iterates through the blender GUI's windows, screens, areas, regions to find the View3D space and its associated window.  Populate an 'oContextOverride context' that can be used with bpy.ops that require to be used from within a View3D (like most addon code that runs of View3D panels)
+        # Tip: If your operator fails the log will show an "PyContext: 'xyz' not found".  To fix stuff 'xyz' into the override context and try again!
+        for oWindow in bpy.context.window_manager.windows:          ###IMPROVE: Find way to avoid doing four levels of traversals at every request!!
+            oScreen = oWindow.screen
+            for oArea in oScreen.areas:
+                if oArea.type == 'VIEW_3D':                         ###LEARN: Frequently, bpy.ops operators are called from View3d's toolbox or property panel.  By finding that window/screen/area we can fool operators in thinking they were called from the View3D!
+                    for oRegion in oArea.regions:
+                        if oRegion.type == 'WINDOW':                ###LEARN: View3D has several 'windows' like 'HEADER' and 'WINDOW'.  Most bpy.ops require 'WINDOW'
+                            #=== Now that we've (finally!) found the damn View3D stuff all that into a dictionary bpy.ops operators can accept to specify their context.  I stuffed extra info in there like selected objects, active objects, etc as most operators require them.  (If anything is missing operator will fail and log a 'PyContext: error on the log with what is missing in context override) ===
+                            oContextOverride = {'window': oWindow, 'screen': oScreen, 'area': oArea, 'region': oRegion, 'scene': bpy.context.scene, 'edit_object': bpy.context.edit_object, 'active_object': bpy.context.active_object, 'selected_objects': bpy.context.selected_objects}   # Stuff the override context with very common requests by operators.  MORE COULD BE NEEDED!
+                            #print("-AssembleOverrideContextForView3dOps() created override context: ", oContextOverride)
+                            return oContextOverride
+        raise Exception("ERROR: AssembleOverrideContextForView3dOps() could not find a VIEW_3D with WINDOW region to create override context to enable View3D operators.  Operator cannot function.")
+
+
+
 
 class BL_ROAD_UTILS:
     def __init__(self):
@@ -204,12 +226,62 @@ class BL_ROAD_UTILS:
             bpy.context.scene.cursor.location = (0,0,0)
         else:
             return(("ERROR", "Can't found terrain below the curve"))
-
         return(("INFO", "Done"))
 
+    def cut_road(plane, terrain, height=9000):
+        
+        #
+        # must be in OBJECT mode to work.
+        # run on isolation
+        # a face on the terrain must be selected in order to zoom works 
+        # and the cut is well done
+        # face selected on mesh is the first point of the plane, so first do a set_terrain_origin()
+        #
+        bpy.ops.object.select_all(action='DESELECT')
+
+        obj_s = bpy.data.objects[plane]
+        obj_t = bpy.data.objects[terrain]
+
+        # move upwards too high so we can 
+        # 1) ray cast
+        # 2) do a full projection
+        
+        obj_s.location = obj_s.location + Vector((0,0,height))
+        #bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+
+        BL_DEBUG.set_mark(Vector((0,0,0)))
+
+          
+        
+        bpy.ops.object.select_all(action='DESELECT')
+        bpy.context.view_layer.objects.active = bpy.data.objects[terrain]
+
+        oContextOverride = BL_UTILS.AssembleOverrideContextForView3dOps()      
+        bpy.data.objects['empty'].select_set(True)
+        bpy.ops.view3d.view_selected(oContextOverride) 
+        bpy.ops.object.delete()
+
+        bpy.data.objects[plane].select_set(True)
+        bpy.data.objects[terrain].select_set(True)
+        bpy.ops.object.mode_set(mode='EDIT', toggle=False)
+        oContextOverride = BL_UTILS.AssembleOverrideContextForView3dOps()      
+        bpy.ops.view3d.view_axis(oContextOverride, type='TOP')
+        bpy.ops.view3d.zoom(oContextOverride,delta=50000)
+        bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1) 
+        bpy.ops.mesh.knife_project(oContextOverride)
+
+        bpy.data.objects[plane].select_set(False)
+        bpy.ops.mesh.delete(type='FACE')
+
+        obj_s.location = obj_s.location - Vector((0,0,height))    
+        bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
+        #bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    
         
 # TEST_IT
-if __name__ == "__main__":
-    BL_ROAD_UTILS.set_terrain_origin('outpux.gpx','Terrain')
+if False:
+    #BL_ROAD_UTILS.set_terrain_origin('outpux.gpx','Terrain')
+    BL_ROAD_UTILS.cut_road('Plane','Terrain')
 
 
+#BL_ROAD_UTILS.cut_road('Plane','Terrain')
