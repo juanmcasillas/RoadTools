@@ -3,6 +3,9 @@
 # test_projector.py
 # (c) 11/04/2020 Juan M. Casillas
 #
+# THIS is the real working copy for Road Projection into a surface
+# 
+#
 # ############################################################################
 
 import bpy
@@ -131,50 +134,16 @@ class BL_PROJECTOR:
             #print("Found", co, index, dist)
             #BL_DEBUG.set_mark(self.obj_t.matrix_world @ co)
             self.bm.verts[index].co[2] = lp.z ## translated coords
+
+            # tune this. There are more space (2-4m)
             if dist > 0.4:
                 self.bm.verts[index].co[0] = lp.x ## translated coords
                 self.bm.verts[index].co[1] = lp.y ## translated coords
-
-
         self.update_bm(freeit=True)
 
-    def match_raycast_vertex_second_pass(self):
-        self.bm = bmesh.new()
-        self.bm.from_mesh(self.obj_t.data)
-        self.bm.verts.ensure_lookup_table()
-        self.bm.edges.ensure_lookup_table()
-        self.bm.faces.ensure_lookup_table()
-  
-        size = len(self.bm.verts)
-        kd = kdtree.KDTree(size)
-
-        for i, vtx in enumerate(self.bm.verts):
-            v = Vector((vtx.co.x, vtx.co.y, 0.0))
-            kd.insert( v, i)
-        kd.balance()
-
-        plane = bpy.data.objects['Plane.001']
-        self.bm.verts.ensure_lookup_table()
-        self.bm.edges.ensure_lookup_table()
-        self.bm.faces.ensure_lookup_table()
-
-        for p in plane.data.vertices:
-            wp = plane.matrix_world @ p.co
-            lp = self.obj_t.matrix_world.inverted() @ wp
-
-            #BL_DEBUG.set_mark(self.obj_t.matrix_world @ location)
-            #BL_DEBUG.set_mark(plane.matrix_world @ p.co)
-            location = Vector((lp.x, lp.y, 0.0))
-            co, index, dist = kd.find( location)  # dist is the distance
-            print("Found", co, index, dist)
-            #BL_DEBUG.set_mark(self.obj_t.matrix_world @ co)
-            self.bm.verts[index].co[2] = lp.z ## translated coords
-
-        self.update_bm(freeit=True)
 
 
 if True:
     tool = BL_PROJECTOR('Plane','Terrain')
     BL_ROAD_UTILS.cut_road('Plane','Terrain')
     tool.match_raycast_vertex()
-    #tool.match_raycast_vertex_second_pass()

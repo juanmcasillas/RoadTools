@@ -206,8 +206,8 @@ def smooth_gpx( gpx_file, optimize=True, ground=False, output="output.gpx",title
     gpx_loader = GPXLoader(optimize=optimize)
     points = gpx_loader.load(gpx_file)
 
-    #bb = GPX_BB(gpx_loader.bounds)
-    #print(bb)
+    bb = GPX_BB(gpx_loader.bounds)
+    print(bb)
     #print(bb.meters_per_deg(bb.NW.latitude, bb.NW.longitude, 100, 100))
     #bb.expand(1000,500,500,1000)
     #print(bb)
