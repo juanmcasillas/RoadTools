@@ -83,7 +83,7 @@ class BL_IMPORTGPX():
             obj.select = True
             bpy.context.scene.update()
         
-        return {"FINISHED"}
+        return(("INFO", "Done"))
 
 
     def read_gpx_file(self, context):

@@ -28,20 +28,20 @@ class ROADTOOLS_OT_FlattenTerrain(Operator):
 
     def execute(self, context):
         scene = context.scene
-        roadtools_properties = scene.roadtools_properties
+        roadtools = scene.roadtools
 
         #
         # get the types, check they are fine
         #
  
-        if not roadtools_properties.terrain_mesh or not roadtools_properties.road_plane \
-           or roadtools_properties.terrain_mesh.type != 'MESH' or roadtools_properties.road_plane.type != 'MESH':
+        if not roadtools.terrain_mesh or not roadtools.road_plane \
+           or roadtools.terrain_mesh.type != 'MESH' or roadtools.road_plane.type != 'MESH':
             self.report({'ERROR'}, 'Invalid Input Data. Terrain should be a MESH, Road should be a MESH')
             return {"FINISHED"}
 
         ret, msg = BL_FLATTEN.flatten_terrain(
-            roadtools_properties.road_plane.name,
-            roadtools_properties.terrain_mesh.name
+            roadtools.road_plane.name,
+            roadtools.terrain_mesh.name
             )
         
         level = 'INFO'

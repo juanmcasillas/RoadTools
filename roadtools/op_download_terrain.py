@@ -1,5 +1,6 @@
 import bpy
 from bl_utils import BL_ROAD_UTILS
+import os.path
 
 from bpy.props import (StringProperty,
                        BoolProperty,
@@ -15,16 +16,17 @@ from bpy.types import (Panel,
                        PropertyGroup,
                        )
 
+from bl_import_gpx import BL_IMPORTGPX
 # ------------------------------------------------------------------------
-# sample operator 
+# load_gpx
 # See the ROADTOOLS_OT_MatchTerrain convention, to roadtools.match_terrain Function.
 # the name MUST BE follow allways this convention
 # ------------------------------------------------------------------------
 
-class ROADTOOLS_OT_MatchTerrain(Operator):
-    bl_idname = 'roadtools.match_terrain'
-    bl_description = "Matches a CURVE road with a MESH terrain, set the origin to WORLD_ORIGIN"
-    bl_label = 'Match Terrain & Road Curve'
+class ROADTOOLS_OT_Download_Terrain(Operator):
+    bl_idname = 'roadtools.download_terrain'
+    bl_description = "Download terrain using OSM"
+    bl_label = 'Download Terrain'
 
     def execute(self, context):
         scene = context.scene
@@ -33,20 +35,18 @@ class ROADTOOLS_OT_MatchTerrain(Operator):
         #
         # get the types, check they are fine
         #
-        if not roadtools.terrain_mesh or not roadtools.road_curve \
-           or roadtools.terrain_mesh.type != 'MESH' or roadtools.road_curve.type != 'CURVE':
-            self.report({'ERROR'}, 'Invalid Input Data. Terrain should be a MESH, Road should be a CURVE')
-            return {"FINISHED"}
 
-        # to the thing here
-        ret, msg = BL_ROAD_UTILS.set_terrain_origin(
-            roadtools.road_curve.name,
-            roadtools.terrain_mesh.name
-        )
+        terrain_type = 'terrain'
+        bpy.context.scene.blender_osm.dataType = terrain_type
+        bpy.context.scene.blender_osm.maxLat = roadtools.maxLat
+        bpy.context.scene.blender_osm.minLon = roadtools.minLon
+        bpy.context.scene.blender_osm.maxLon = roadtools.maxLon
+        bpy.context.scene.blender_osm.minLat = roadtools.minLat
+        bpy.ops.blender_osm.import_data()        
 
         level = 'INFO'
-        if not ret: level = 'ERROR'
-        self.report({level}, 'RoadTools: Matching Terrain: %s' % msg)
+        msg = "Terrain Downloaded type='%s'" % terrain_type
+        self.report({level}, 'RoadTools: Download Terrain: %s' % msg)
         return {"FINISHED"}
 
 # ------------------------------------------------------------------------
@@ -54,7 +54,7 @@ class ROADTOOLS_OT_MatchTerrain(Operator):
 # ------------------------------------------------------------------------
 
 classes = (
-    ROADTOOLS_OT_MatchTerrain,
+    ROADTOOLS_OT_Download_Terrain,
 )
 
 def register():

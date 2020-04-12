@@ -135,8 +135,8 @@ class BL_FAKETERRAIN():
         return(object)    
 
         
-a = BL_FAKETERRAIN(40.335921,-4.849929,-4.805058,40.253744)
-a.create('Terrain', 1000,500,500,1000)
+#a = BL_FAKETERRAIN(40.335921,-4.849929,-4.805058,40.253744)
+#a.create('Terrain', 1000,500,500,1000)
 
     
 

@@ -1,5 +1,6 @@
 import bpy
 from bl_utils import BL_ROAD_UTILS
+import os.path
 
 from bpy.props import (StringProperty,
                        BoolProperty,
@@ -15,16 +16,17 @@ from bpy.types import (Panel,
                        PropertyGroup,
                        )
 
+from bl_import_gpx import BL_IMPORTGPX
 # ------------------------------------------------------------------------
-# sample operator 
+# load_gpx
 # See the ROADTOOLS_OT_MatchTerrain convention, to roadtools.match_terrain Function.
 # the name MUST BE follow allways this convention
 # ------------------------------------------------------------------------
 
-class ROADTOOLS_OT_MatchTerrain(Operator):
-    bl_idname = 'roadtools.match_terrain'
-    bl_description = "Matches a CURVE road with a MESH terrain, set the origin to WORLD_ORIGIN"
-    bl_label = 'Match Terrain & Road Curve'
+class ROADTOOLS_OT_Load_Gpx(Operator):
+    bl_idname = 'roadtools.load_gpx'
+    bl_description = "Load a GPX file, smooth it, and calculates it's bounding box"
+    bl_label = 'Load GPX'
 
     def execute(self, context):
         scene = context.scene
@@ -33,20 +35,31 @@ class ROADTOOLS_OT_MatchTerrain(Operator):
         #
         # get the types, check they are fine
         #
-        if not roadtools.terrain_mesh or not roadtools.road_curve \
-           or roadtools.terrain_mesh.type != 'MESH' or roadtools.road_curve.type != 'CURVE':
-            self.report({'ERROR'}, 'Invalid Input Data. Terrain should be a MESH, Road should be a CURVE')
+        if not roadtools.gpx_file:
+            self.report({'ERROR'}, "GPX file must be not empty")
+            return {"FINISHED"}
+            
+
+        if not os.path.exists(roadtools.gpx_file):
+            self.report({'ERROR'}, "GPX file doesn't exists")
             return {"FINISHED"}
 
-        # to the thing here
-        ret, msg = BL_ROAD_UTILS.set_terrain_origin(
-            roadtools.road_curve.name,
-            roadtools.terrain_mesh.name
-        )
-
         level = 'INFO'
-        if not ret: level = 'ERROR'
-        self.report({level}, 'RoadTools: Matching Terrain: %s' % msg)
+        gpx = BL_IMPORTGPX()
+        try:
+            ret,msg = gpx.import_gpx(roadtools.gpx_file)
+            #a.bounding_box.expand(1000,500,500,1000)
+            #print(a.bounding_box)
+            scene.roadtools.maxLat =  gpx.bounding_box.top
+            scene.roadtools.minLon =  gpx.bounding_box.left
+            scene.roadtools.maxLon =  gpx.bounding_box.right
+            scene.roadtools.minLat =  gpx.bounding_box.bottom
+
+        except Exception as e:
+            level = 'ERROR'
+            msg = str(e)
+        
+        self.report({level}, 'RoadTools: Load GPX: %s' % msg)
         return {"FINISHED"}
 
 # ------------------------------------------------------------------------
@@ -54,7 +67,7 @@ class ROADTOOLS_OT_MatchTerrain(Operator):
 # ------------------------------------------------------------------------
 
 classes = (
-    ROADTOOLS_OT_MatchTerrain,
+    ROADTOOLS_OT_Load_Gpx,
 )
 
 def register():

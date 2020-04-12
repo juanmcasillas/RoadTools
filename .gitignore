@@ -1,5 +1,5 @@
 osm
 *.blend1
-__pycache__
+__pycache__/
 *.pyc
 blender_addons

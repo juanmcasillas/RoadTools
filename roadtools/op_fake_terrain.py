@@ -1,5 +1,6 @@
 import bpy
 from bl_utils import BL_ROAD_UTILS
+import os.path
 
 from bpy.props import (StringProperty,
                        BoolProperty,
@@ -15,16 +16,17 @@ from bpy.types import (Panel,
                        PropertyGroup,
                        )
 
+from bl_import_gpx import BL_IMPORTGPX
 # ------------------------------------------------------------------------
-# sample operator 
+# load_gpx
 # See the ROADTOOLS_OT_MatchTerrain convention, to roadtools.match_terrain Function.
 # the name MUST BE follow allways this convention
 # ------------------------------------------------------------------------
 
-class ROADTOOLS_OT_MatchTerrain(Operator):
-    bl_idname = 'roadtools.match_terrain'
-    bl_description = "Matches a CURVE road with a MESH terrain, set the origin to WORLD_ORIGIN"
-    bl_label = 'Match Terrain & Road Curve'
+class ROADTOOLS_OT_Fake_Terrain(Operator):
+    bl_idname = 'roadtools.fake_terrain'
+    bl_description = "Calculate a new bounding box based on coords loaded"
+    bl_label = 'Extend Bounding Box'
 
     def execute(self, context):
         scene = context.scene
@@ -33,20 +35,20 @@ class ROADTOOLS_OT_MatchTerrain(Operator):
         #
         # get the types, check they are fine
         #
-        if not roadtools.terrain_mesh or not roadtools.road_curve \
-           or roadtools.terrain_mesh.type != 'MESH' or roadtools.road_curve.type != 'CURVE':
-            self.report({'ERROR'}, 'Invalid Input Data. Terrain should be a MESH, Road should be a CURVE')
-            return {"FINISHED"}
 
-        # to the thing here
-        ret, msg = BL_ROAD_UTILS.set_terrain_origin(
-            roadtools.road_curve.name,
-            roadtools.terrain_mesh.name
-        )
+        from bl_fake_terrain import BL_FAKETERRAIN
+
+        a = BL_FAKETERRAIN(roadtools.maxLat, roadtools.minLon, roadtools.maxLon, roadtools.minLat)
+        a.create('Terrain',  roadtools.top, roadtools.left, roadtools.right, roadtools.bottom)       
+
+        scene.roadtools.maxLat =  a.BB.top
+        scene.roadtools.minLon =  a.BB.left
+        scene.roadtools.maxLon =  a.BB.right
+        scene.roadtools.minLat =  a.BB.bottom
 
         level = 'INFO'
-        if not ret: level = 'ERROR'
-        self.report({level}, 'RoadTools: Matching Terrain: %s' % msg)
+        msg = "new size: %3.2f width (m) x %3.2f height(m) " % (a.BB.width, a.BB.height)
+        self.report({level}, 'RoadTools: Extend terrain: %s' % msg)
         return {"FINISHED"}
 
 # ------------------------------------------------------------------------
@@ -54,7 +56,7 @@ class ROADTOOLS_OT_MatchTerrain(Operator):
 # ------------------------------------------------------------------------
 
 classes = (
-    ROADTOOLS_OT_MatchTerrain,
+    ROADTOOLS_OT_Fake_Terrain,
 )
 
 def register():
