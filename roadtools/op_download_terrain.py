@@ -1,3 +1,18 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# ############################################################################
+#
+# op_download_terrain.py
+# 04/13/2020 (c) Juan M. Casillas <juanm.casillas@gmail.com>
+#
+# operator for blender to download terrain invoking the blender-osm module
+# also sets the bounding box.
+#
+# TODO:
+#    * terrain type is for now hardcoded
+#    * set the terrain to the roadtools property
+# 
+# ############################################################################
 import bpy
 from bl_utils import BL_ROAD_UTILS
 import os.path

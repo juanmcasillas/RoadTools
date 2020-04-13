@@ -1,11 +1,22 @@
-#from polar.gpxtoolbox import *
-#from polar.mapper import *
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# ############################################################################
+#
+# gpx_optimizer.py
+# optimizes the gpx info removing some points, getting the straight lines and
+# removing unneeded points, and so on. Also defines a savitzky_golay 
+# implementation.
+# 
+# 04/13/2020
+# (c) Juan M. Casillas <juanm.casillas@gmail.com>
+# 
+# ############################################################################
+
 from gpxpy import geo
 import sys
 import math
 import numpy as np
 from math import factorial
-
 
 class GPXOptimizer:
     def __init__(self):

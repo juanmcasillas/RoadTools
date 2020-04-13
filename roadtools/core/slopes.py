@@ -1,5 +1,13 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# ############################################################################
+#
+# slopes.py
+# 04/13/2020 (c) Juan M. Casillas <juanm.casillas@gmail.com>
+# calculate track slopes based on distance and return same-witdh slopes
+# 
+# ############################################################################
 import sys
-
 import datetime
 import time
 import os.path

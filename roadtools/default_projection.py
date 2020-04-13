@@ -1,7 +1,18 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# ############################################################################
+#
+# default_projection.py
+# 04/13/2020 (c) Juan M. Casillas <juanm.casillas@gmail.com>
+#
+# implements the default (mercator) projection for project elements in 
+# blender using lat/lon
+# 
+# ############################################################################
+
 import sys
 import bpy
 import math
-
 
 _isBlender280 = bpy.app.version[1] >= 80
 

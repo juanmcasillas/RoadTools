@@ -1,3 +1,13 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# ############################################################################
+#
+# op_expand_terrain.py
+# 04/13/2020 (c) Juan M. Casillas <juanm.casillas@gmail.com>
+#
+# operator for blender to expand the terrain boundary in meters.
+# 
+# ############################################################################
 import bpy
 from bl_utils import BL_ROAD_UTILS
 import os.path
@@ -17,15 +27,10 @@ from bpy.types import (Panel,
                        )
 
 from bl_import_gpx import BL_IMPORTGPX
-# ------------------------------------------------------------------------
-# load_gpx
-# See the ROADTOOLS_OT_MatchTerrain convention, to roadtools.match_terrain Function.
-# the name MUST BE follow allways this convention
-# ------------------------------------------------------------------------
 
-class ROADTOOLS_OT_Extend_Terrain(Operator):
-    bl_idname = 'roadtools.extend_terrain'
-    bl_description = "Calculate a new bounding box based on coords loaded"
+class ROADTOOLS_OT_Expand_Terrain(Operator):
+    bl_idname = 'roadtools.expand_terrain'
+    bl_description = "Expand the terrain boundary in meters"
     bl_label = 'Extend Bounding Box'
 
     def execute(self, context):
@@ -57,7 +62,7 @@ class ROADTOOLS_OT_Extend_Terrain(Operator):
 # ------------------------------------------------------------------------
 
 classes = (
-    ROADTOOLS_OT_Extend_Terrain,
+    ROADTOOLS_OT_Expand_Terrain,
 )
 
 def register():

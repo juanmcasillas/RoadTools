@@ -1,4 +1,9 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# ############################################################################
+#
+# gpxtoolbox.py
+# 04/13/2020 (c) Juan M. Casillas <juanm.casillas@gmail.com>
 #
 # gpx to gpx-polar file format. Add the Elevation data and make it compliant
 # with the PolarProtrainer format
@@ -6,15 +11,15 @@
 # http://www.topografix.com/gpx_manual.asp (version 1.0)
 #
 #
-#GPX extracted from PolarPersonalTrainer (GPX 1.1)
+# GPX extracted from PolarPersonalTrainer (GPX 1.1)
 #
-#<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+# <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 #
-#<gpx xmlns="http://www.topografix.com/GPX/1/1"
-#	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-#	creator="http://www.polarpersonaltrainer.com"
-#	version="1.1"
-#	xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+# <gpx xmlns="http://www.topografix.com/GPX/1/1"
+#	 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+#	 creator="http://www.polarpersonaltrainer.com"
+#	 version="1.1"
+#	 xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
 #
 #    <metadata>
 #        <name>Running</name>
@@ -34,10 +39,10 @@
 #            </trkpt>
 #
 #
-#GPX generated from RCX5 to the directory (GPX 1.0)
+# GPX generated from RCX5 to the directory (GPX 1.0)
 #
-#<?xml version="1.0" encoding="UTF-8"?>
-#<gpx
+# <?xml version="1.0" encoding="UTF-8"?>
+# <gpx
 #	  xmlns="http://www.topografix.com/GPX/1/0"
 #	  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 #	  creator="Polar WebSync 2.4 - www.polar.fi"
@@ -59,6 +64,9 @@
 # remove metadata info
 # Add the ele element (elevation)
 #
+# 
+# 
+# ############################################################################
 
 import time
 from datetime import datetime

@@ -1,3 +1,13 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# ############################################################################
+#
+# op_flatten_terrain.py
+# 04/13/2020 (c) Juan M. Casillas <juanm.casillas@gmail.com>
+#
+# TODO: this should be changed
+# 
+# ############################################################################
 import bpy
 from bl_flatten import BL_FLATTEN
 

@@ -1,17 +1,22 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# ############################################################################
+#
+# bl_fake_terrain.py
+# 04/13/2020 (c) Juan M. Casillas <juanm.casillas@gmail.com>
 #
 # This class is a rewritten of blender-gpx to support my gpx optimizations
 # uses gpxpy, and a custom smooth function. Also support expanding the
 # bounding box and 
-#
-# Juan M. Casillas <juanm.casillas@gmail.com>
-#
 #
 # a = BL_IMPORTGPX()
 # a.import_gpx("/Archive/Src/RoadTools/gpx/mijares.gpx")
 # print(a.bounding_box)
 # a.bounding_box.expand(1000,500,500,1000)
 # print(a.bounding_box)
-#
+# 
+# ############################################################################
+
 import os, sys
 import bpy, bmesh
 import math

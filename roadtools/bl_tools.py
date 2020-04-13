@@ -1,9 +1,12 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 # ############################################################################
 #
 # bl_tools.py
-# Some helpers to create the raycast points from a plane, etc
-# (c) 11/04/2020 Juan M. Casillas
+# 04/13/2020 (c) Juan M. Casillas <juanm.casillas@gmail.com>
 #
+# Some helpers to create the raycast points from a plane, etc
+# 
 # ############################################################################
 
 import bpy
@@ -13,9 +16,7 @@ import bmesh
 import sys
 import time
 
-
 from bl_utils import BL_DEBUG
-
 
 class BL_TOOLS:
 

@@ -1,3 +1,15 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# ############################################################################
+#
+# __init__.py
+# 04/13/2020 (c) Juan M. Casillas <juanm.casillas@gmail.com>
+#
+# roadtools init file for blender addon. Load the modules and set the path
+# right, so we can use it from blender. Does automatic registration
+# 
+# ############################################################################
+
 bl_info = {
     "name": "Road Tools",
     "description": "Road Tools Helpers",
@@ -11,11 +23,9 @@ bl_info = {
     "category": "Development"
 }
 
-
-
 modulesNames = [ 'properties', 
                 'op_load_gpx',
-                'op_extend_terrain', 
+                'op_expand_terrain', 
                 'op_download_terrain', 
                 'op_fake_terrain',
                 'op_match_terrain', 

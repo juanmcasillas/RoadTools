@@ -1,6 +1,19 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# ############################################################################
+#
+# ui.py
+# 04/13/2020 (c) Juan M. Casillas <juanm.casillas@gmail.com>
+#
+# RoadTools UI (user interface, panels) definitions
+# 
+# ############################################################################
+
 import bpy
 
 _isBlender280 = bpy.app.version[1] >= 80
+#addon_name = __name__ # when single file
+addon_name = __package__ # when a file in package
 
 # ------------------------------------------------------------------------
 # first panel. Select the GPX file, smooth it and calculate the 
@@ -13,6 +26,12 @@ class OBJECT_PT_Panel_LoadGPX(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_category = "RoadTools"
+
+    # panel in object mode
+    @classmethod
+    def poll(self,context):
+        return context.mode == 'OBJECT'
+
 
     def draw(self, context):
         scene = context.scene
@@ -35,6 +54,12 @@ class OBJECT_PT_Panel_BoundingBox(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_category = "RoadTools"
+
+    # panel in object mode
+    @classmethod
+    def poll(self,context):
+        return context.mode == 'OBJECT'
+
 
     def draw(self, context):
         scene = context.scene
@@ -78,48 +103,13 @@ class OBJECT_PT_Panel_BoundingBox(bpy.types.Panel):
 
         box = layout.box()
         row = box.row(align=True)
-        row.operator("roadtools.extend_terrain", icon='ARROW_LEFTRIGHT', text="Extend Terrain")  
+        row.operator("roadtools.expand_terrain", icon='ARROW_LEFTRIGHT', text="Expand Terrain")  
         row = box.row(align=True)        
         row.operator("roadtools.download_terrain", icon='BLANK1', text="Download Terrain") 
         row = box.row(align=True)        
         row.operator("roadtools.fake_terrain", icon='AUTO', text="Create Fake Terrain")           
 
 
-
-
-
-class PanelBlosmExtent(bpy.types.Panel):
-    def draw(self, context):
-        layout = self.layout
-        addon = context.scene.blender_osm
-        
-        if (addon.dataType == "osm" and addon.osmSource == "server") or\
-            (addon.dataType == "overlay" and not bpy.data.objects.get(addon.terrainObject)) or\
-            addon.dataType == "terrain" or\
-            (addon.dataType == "geojson" and addon.coordinatesAsFilter):
-            box = layout.box()
-            row = box.row()
-            row.alignment = "CENTER"
-            row.label(text="Extent:")
-            row = box.row(align=True)
-            row.operator("blender_osm.select_extent")
-            row.operator("blender_osm.paste_extent")
-            row.operator("blender_osm.extent_from_active")
-            
-            split = box.split(factor=0.25) if _isBlender280 else box.split(percentage=0.25)
-            split.label(text="")
-            ( split.split(factor=0.67) if _isBlender280 else split.split(percentage=0.67) ).prop(addon, "maxLat")
-            row = box.row()
-            row.prop(addon, "minLon")
-            row.prop(addon, "maxLon")
-            split = box.split(factor=0.25) if _isBlender280 else box.split(percentage=0.25)
-            split.label(text="")
-            ( split.split(factor=0.67) if _isBlender280 else split.split(percentage=0.67) ).prop(addon, "minLat")
-        
-        box = layout.box()
-        row = box.row(align=True)
-        row.prop(addon, "dataType", text="")
-        row.operator("blender_osm.import_data", text="import")
 
 
 
@@ -134,6 +124,12 @@ class OBJECT_PT_Panel_TerrainMatch(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_category = "RoadTools"
+
+    # panel in object mode
+    @classmethod
+    def poll(self,context):
+        return context.mode == 'OBJECT'
+
 
     def draw(self, context):
         scene = context.scene
@@ -158,6 +154,11 @@ class OBJECT_PT_Panel_TerrainFlatten(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_category = "RoadTools"
+
+    # panel in object mode
+    @classmethod
+    def poll(self,context):
+        return context.mode == 'OBJECT'
 
     def draw(self, context):
         scene = context.scene

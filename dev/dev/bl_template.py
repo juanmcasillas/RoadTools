@@ -1,3 +1,15 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# ############################################################################
+#
+# bl_template.py
+# 04/13/2020 (c) Juan M. Casillas <juanm.casillas@gmail.com>
+#
+# see here
+# https://blender.stackexchange.com/questions/57306/how-to-create-a-custom-ui
+# 
+# ############################################################################
+
 bl_info = {
     "name": "Add-on Template",
     "description": "",
@@ -10,7 +22,6 @@ bl_info = {
     "tracker_url": "",
     "category": "Development"
 }
-
 
 import bpy
 

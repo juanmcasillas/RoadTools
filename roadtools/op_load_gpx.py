@@ -1,3 +1,14 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# ############################################################################
+#
+# op_load_gpx.py
+# 04/13/2020 (c) Juan M. Casillas <juanm.casillas@gmail.com>
+#
+# operator for blender to invoke or load_gpx function, smooth it, calculate
+# the bounding box, and create the curve in blender. 
+# 
+# ############################################################################
 import bpy
 from bl_utils import BL_ROAD_UTILS
 import os.path

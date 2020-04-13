@@ -1,3 +1,18 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# ############################################################################
+#
+# op_fake_terrain.py
+# 04/13/2020 (c) Juan M. Casillas <juanm.casillas@gmail.com>
+#
+# operator for blender to create a fake (synthetic) terrain at 0 elevation, 
+# to do your our custom tracks
+# 
+# TODO:
+#    * set the elevation (height) from variable, instead of hardcoding it
+#    * set the terrain to the roadtools property
+# 
+# ############################################################################
 import bpy
 from bl_utils import BL_ROAD_UTILS
 import os.path
@@ -17,11 +32,7 @@ from bpy.types import (Panel,
                        )
 
 from bl_import_gpx import BL_IMPORTGPX
-# ------------------------------------------------------------------------
-# load_gpx
-# See the ROADTOOLS_OT_MatchTerrain convention, to roadtools.match_terrain Function.
-# the name MUST BE follow allways this convention
-# ------------------------------------------------------------------------
+
 
 class ROADTOOLS_OT_Fake_Terrain(Operator):
     bl_idname = 'roadtools.fake_terrain'

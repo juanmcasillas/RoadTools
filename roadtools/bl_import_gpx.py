@@ -1,10 +1,16 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# ############################################################################
 #
-# This class is a rewritten of blender-gpx to support my gpx optimizations
-# uses gpxpy, and a custom smooth function. Also support expanding the
-# bounding box and 
+# bl_import_gpx.py
+# 04/13/2020 (c) Juan M. Casillas <juanm.casillas@gmail.com>
 #
-# Juan M. Casillas <juanm.casillas@gmail.com>
+# Read a GPX file and process it, smoothing and calculating the bounding box
+# creates a curve (mesh) in blender so we can work on it after that.
 #
+# TODO:
+#  * add the curve to the roadtools properties
+#  * set a global name instead the filename
 #
 # a = BL_IMPORTGPX()
 # a.import_gpx("/Archive/Src/RoadTools/gpx/mijares.gpx")
@@ -12,6 +18,7 @@
 # a.bounding_box.expand(1000,500,500,1000)
 # print(a.bounding_box)
 #
+# ############################################################################
 import os, sys
 import bpy, bmesh
 import core.smooth

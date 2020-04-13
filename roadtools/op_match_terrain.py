@@ -1,3 +1,14 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# ############################################################################
+#
+# op_match_terrain.py
+# 04/13/2020 (c) Juan M. Casillas <juanm.casillas@gmail.com>
+#
+# blender operator to set the track curve and terrain at the same point,
+# and move it to the world origin (0,0,0)
+# 
+# ############################################################################
 import bpy
 from bl_utils import BL_ROAD_UTILS
 
@@ -15,11 +26,6 @@ from bpy.types import (Panel,
                        PropertyGroup,
                        )
 
-# ------------------------------------------------------------------------
-# sample operator 
-# See the ROADTOOLS_OT_MatchTerrain convention, to roadtools.match_terrain Function.
-# the name MUST BE follow allways this convention
-# ------------------------------------------------------------------------
 
 class ROADTOOLS_OT_MatchTerrain(Operator):
     bl_idname = 'roadtools.match_terrain'

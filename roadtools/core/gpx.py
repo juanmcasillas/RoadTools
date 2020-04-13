@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# ///////////////////////////////////////////////////////////////////////////
+# ############################################################################
 #
+# gpx.py
+# 04/13/2020 (c) Juan M. Casillas <juanm.casillas@gmail.com>
+# 
 # Read a GPX file, and build a road. Return the data in the normalized
 # OpenGL vertexData structure
-#
-# ///////////////////////////////////////////////////////////////////////////
+# 
+# ############################################################################
 
 import sys
 import gpxpy

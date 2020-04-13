@@ -1,10 +1,13 @@
- #!/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# ///////////////////////////////////////////////////////////////////////////
+# ############################################################################
 #
+# smooth.py
+# 04/13/2020 (c) Juan M. Casillas <juanm.casillas@gmail.com>
+# 
 # Read a GPX file, smooth it, ready to build a road in blender, or whatever
-#
-# ///////////////////////////////////////////////////////////////////////////
+# 
+# ############################################################################
 
 import os
 import numpy as np
@@ -20,13 +23,6 @@ from slopes import SlopeManager
 from gpxtoolbox import GPXItem
 import datetime
 from gpxbb import GPX_BB
-
-
-# ///////////////////////////////////////////////////////////////////////////
-#
-#
-#
-# ///////////////////////////////////////////////////////////////////////////
 
 class ProjectionMapper:
     """

@@ -1,3 +1,13 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# ############################################################################
+#
+# properties.py
+# 04/13/2020 (c) Juan M. Casillas <juanm.casillas@gmail.com>
+#
+# RoadTools blender add on class properties to store values
+# 
+# ############################################################################
 import bpy
 
 from bpy.props import (StringProperty,

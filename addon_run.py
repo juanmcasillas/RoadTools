@@ -1,6 +1,17 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# ############################################################################
 #
-# Use this file in Blender Editor to launch the module so we don't need to install it
+# addon_run.py
+# 04/13/2020 (c) Juan M. Casillas <juanm.casillas@gmail.com>
 #
+# Use this file in Blender Editor to launch the module so we don't need 
+# to install it. Just create a new script in your blender file, run it,
+# and you can import all the modules from the roadtools addon. Also 
+# register the UI, operators, etc.
+# 
+# ############################################################################
+
 import os
 import sys
 import bpy
