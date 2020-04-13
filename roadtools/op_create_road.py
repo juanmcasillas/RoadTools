@@ -2,14 +2,16 @@
 # -*- coding: utf-8 -*-
 # ############################################################################
 #
-# op_match_terrain.py
+# op_create_road.py
 # 04/13/2020 (c) Juan M. Casillas <juanm.casillas@gmail.com>
 #
-# blender operator to set the track curve and terrain at the same point,
-# and move it to the world origin (0,0,0)
+# create a road in high or low res
+# High res means using the point-by-point template, low res
+# uses an array modifier and curve one to create a low poly road
 # 
 # ############################################################################
 import bpy
+import math
 
 from bpy.props import (StringProperty,
                        BoolProperty,
@@ -27,10 +29,10 @@ from bpy.types import (Panel,
 
 import bl_road_utils
 
-class ROADTOOLS_OT_MatchTerrain(Operator):
-    bl_idname = 'roadtools.match_terrain'
-    bl_description = "Matches a CURVE road with a MESH terrain, set the origin to WORLD_ORIGIN"
-    bl_label = 'Match Terrain & Road Curve'
+class ROADTOOLS_OT_CreateRoad(Operator):
+    bl_idname = 'roadtools.create_road'
+    bl_description = "create a road in high or low res"
+    bl_label = 'Create Road'
 
     def execute(self, context):
         scene = context.scene
@@ -39,19 +41,22 @@ class ROADTOOLS_OT_MatchTerrain(Operator):
         #
         # get the types, check they are fine
         #
-        if not roadtools.terrain_mesh or not roadtools.road_curve:
-            self.report({'ERROR'}, 'Invalid Input Data. Terrain should be a MESH, Road should be a CURVE')
+        if not roadtools.road_curve:
+            self.report({'ERROR'}, 'Invalid Input Data. Road should be a CURVE')
             return {"FINISHED"}
 
-        # to the thing here
-        ret, msg = bl_road_utils.set_terrain_origin(
-            roadtools.road_curve.name,
-            roadtools.terrain_mesh.name
-        )
+        ret, msg, obj = bl_road_utils.create_road(
+                roadtools.road_curve.name, 
+                roadtools.road_width, 
+                roadtools.road_height,
+                roadtools.gpx_length, 
+                hires=roadtools.road_hires
+            )
 
+        # to the thing here
         level = 'INFO'
         if not ret: level = 'ERROR'
-        self.report({level}, 'RoadTools: Matching Terrain: %s' % msg)
+        self.report({level}, 'RoadTools: Create Road: %s' % msg)
         return {"FINISHED"}
 
 # ------------------------------------------------------------------------
@@ -59,7 +64,7 @@ class ROADTOOLS_OT_MatchTerrain(Operator):
 # ------------------------------------------------------------------------
 
 classes = (
-    ROADTOOLS_OT_MatchTerrain,
+    ROADTOOLS_OT_CreateRoad,
 )
 
 def register():

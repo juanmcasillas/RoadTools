@@ -57,7 +57,7 @@ class ROADTOOLS_OT_Load_Gpx(Operator):
         level = 'INFO'
         gpx = BL_IMPORT_GPX()
         try:
-            ret,msg,obj = gpx.import_gpx(roadtools.gpx_file)
+            ret, msg, obj, length = gpx.import_gpx(roadtools.gpx_file)
             #a.bounding_box.expand(1000,500,500,1000)
             #print(a.bounding_box)
             scene.roadtools.maxLat =  gpx.bounding_box.top
@@ -65,6 +65,7 @@ class ROADTOOLS_OT_Load_Gpx(Operator):
             scene.roadtools.maxLon =  gpx.bounding_box.right
             scene.roadtools.minLat =  gpx.bounding_box.bottom
             scene.roadtools.road_curve = obj
+            scene.roadtools.gpx_length = length
 
         except Exception as e:
             level = 'ERROR'

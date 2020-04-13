@@ -57,6 +57,26 @@ class ROADTOOLS_OT_Fake_Terrain(Operator):
         scene.roadtools.minLat =  a.BB.bottom
         scene.roadtools.terrain_mesh = obj
 
+        if roadtools.satellite:
+            print("getting satellite images")
+            bpy.context.scene.blender_osm.terrainObject = obj.name
+            bpy.context.scene.blender_osm.maxLat = scene.roadtools.maxLat
+            bpy.context.scene.blender_osm.minLon = scene.roadtools.minLon
+            bpy.context.scene.blender_osm.maxLon = scene.roadtools.maxLon
+            bpy.context.scene.blender_osm.minLat = scene.roadtools.minLat
+            # download the satellite texture
+            # see here https://github.com/vvoovv/blender-osm/wiki/Documentation#custom-url
+            # get the satellite texture from google
+            bpy.context.scene.blender_osm.dataType = 'overlay'
+            bpy.context.scene.blender_osm.overlayType = 'custom'
+            bpy.context.scene.blender_osm.overlayUrl = "http://mt.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
+            bpy.ops.blender_osm.import_data()   
+
+            
+        # get the value and set my pointer to the terrain
+
+
+
         level = 'INFO'
         msg = "new size: %3.2f width (m) x %3.2f height(m) " % (a.BB.width, a.BB.height)
         self.report({level}, 'RoadTools: Extend terrain: %s' % msg)

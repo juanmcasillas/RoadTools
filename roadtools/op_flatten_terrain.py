@@ -44,8 +44,7 @@ class ROADTOOLS_OT_FlattenTerrain(Operator):
         # get the types, check they are fine
         #
  
-        if not roadtools.terrain_mesh or not roadtools.road_plane \
-           or roadtools.terrain_mesh.type != 'MESH' or roadtools.road_plane.type != 'MESH':
+        if not roadtools.terrain_mesh or not roadtools.road_plane:
             self.report({'ERROR'}, 'Invalid Input Data. Terrain should be a MESH, Road should be a MESH')
             return {"FINISHED"}
 

@@ -28,7 +28,8 @@ modulesNames = [ 'properties',
                 'op_expand_terrain', 
                 'op_download_terrain', 
                 'op_fake_terrain',
-                'op_match_terrain', 
+                'op_match_terrain',
+                'op_create_road',
                 'op_flatten_terrain', 
                 'ui']
 

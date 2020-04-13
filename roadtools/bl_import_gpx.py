@@ -21,9 +21,12 @@
 # ############################################################################
 import os, sys
 import bpy, bmesh
-import core.smooth
 import math
+import mathutils
+
 from default_projection import DefaultProjection
+import core.smooth
+
 
 _isBlender280 = bpy.app.version[1] >= 80
 
@@ -49,7 +52,16 @@ class BL_IMPORT_GPX():
         self.bounding_box = None
         self.points = None
 
-    def import_gpx(self, filepath,name=None):
+    def import_gpx(self, filepath, name="gpx_curve"):
+        """import a gpx file smoothing it and leveling the altitudes 
+        also adjusts the origin of the object to the first point
+        
+        Arguments:
+            filepath {string} -- full path to the gpx file
+        
+        Keyword Arguments:
+            name {string} -- the object name in blender (default: {None})
+        """
         
         self.filepath = filepath
 
@@ -69,9 +81,9 @@ class BL_IMPORT_GPX():
         name = name or os.path.basename(self.filepath)
         
         if self.importType == "curve":
-            obj = self.makeCurve(bpy.context, name)
+            obj, length = self.makeCurve(bpy.context, name)
         else:
-            obj = self.makeMesh(bpy.context, name)
+            obj, length = self.makeMesh(bpy.context, name)
         
         if _isBlender280:
             bpy.context.scene.collection.objects.link(obj)
@@ -90,12 +102,23 @@ class BL_IMPORT_GPX():
             obj.select = True
             bpy.context.scene.update()
         
-        return(("INFO", "Done", obj))
+        # put the origin of the object in the first point
+        # new_origin = obj.data.splines.active.points[0].co.xyz
+        # obj.data.transform(mathutils.Matrix.Translation(-new_origin))
+        # obj.matrix_world.translation += new_origin
+
+        # apply all transformations
+        # obj.data.transform(obj.matrix_world)
+        # obj.matrix_world = mathutils.Matrix()
+
+        
+
+        return(("INFO", "Done", obj, length))
 
 
     def read_gpx_file(self, context):
         
-        points, bb = core.smooth.smooth_gpx(self.filepath, optimize=True, ground=False, output=None)
+        points, bb, length = core.smooth.smooth_gpx(self.filepath, optimize=True, ground=False, output=None)
         
         self.points = points
         self.bounding_box = bb
@@ -113,12 +136,12 @@ class BL_IMPORT_GPX():
         #projection = self.getProjection(context, 
         projection = self.projection.getProjection(context,lat = (minLat + maxLat)/2, lon = (minLon + maxLon)/2)
 
-        return [segment], projection
+        return [segment], projection, length
     
     def makeMesh(self, context, name):
         self.bm = bmesh.new()
 
-        segments, projection = self.read_gpx_file(context)
+        segments, projection, length = self.read_gpx_file(context)
         
         # create vertices and edges for the track segments
         for segment in segments:
@@ -133,11 +156,12 @@ class BL_IMPORT_GPX():
         # finalize
         mesh = bpy.data.meshes.new(name)
         self.bm.to_mesh(mesh)
+
         # cleanup
         self.bm.free()
         self.bm = None
         
-        return bpy.data.objects.new(name, mesh)
+        return (bpy.data.objects.new(name, mesh), length)
     
     def makeCurve(self, context, name):
         curve = bpy.data.curves.new(name, 'CURVE')
@@ -145,7 +169,7 @@ class BL_IMPORT_GPX():
         curve.twist_mode = 'Z_UP'
         self.curve = curve
         
-        segments, projection = self.read_gpx_file(context)
+        segments, projection, length = self.read_gpx_file(context)
         
         for segment in segments:
             self.createSpline()
@@ -159,7 +183,7 @@ class BL_IMPORT_GPX():
         self.curve = None
         self.spline = None
 
-        return bpy.data.objects.new(name, curve)
+        return (bpy.data.objects.new(name, curve), length)
 
 
     def createSpline(self, curve=None):

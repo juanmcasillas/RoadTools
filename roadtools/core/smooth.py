@@ -109,6 +109,9 @@ class GPXLoader:
             for segment in track.segments:
                 points += segment.points
         
+        gpx_data.tracks[0].segments[0].points = points
+        self.length_3d = gpx_data.tracks[0].length_3d()
+
         print("Loaded %d points" % len(points))
         #if self.optimize:
         #    gpx_optimizer = GPXOptimizer()
@@ -243,7 +246,8 @@ def smooth_gpx( gpx_file, optimize=True, ground=False, output="output.gpx",title
         fd.write(data)
         fd.close()
     
-    return (pd, GPX_BB(gpx_loader.bounds) )
+    print("length:", gpx_loader.length_3d)
+    return (pd, GPX_BB(gpx_loader.bounds), gpx_loader.length_3d )
 
 if __name__ == "__main__":
 
@@ -255,6 +259,7 @@ if __name__ == "__main__":
     parser.add_argument("gpx_file", help="GPX file to load")
     args = parser.parse_args()
 
-    smooth_gpx( args.gpx_file, optimize=args.optimize, ground=args.ground, output="output.gpx",title="output")
+    _,_,d = smooth_gpx( args.gpx_file, optimize=args.optimize, ground=args.ground, output="output.gpx",title="output")
+    print(d)
 
 

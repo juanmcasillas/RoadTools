@@ -9,6 +9,7 @@
 # 
 # ############################################################################
 
+import time
 import bpy
 from mathutils import Vector, Matrix, Euler
 from math import radians
@@ -88,6 +89,68 @@ class NearestData:
 
 
 
+class RoadMesh:
+    """implements a very basic road builder, based on point and distance.
+    """
+    def __init__(self, name="road", width=10):
+        self.width = width
+        self.half_width = self.width/2.0
+        self.vertex = []
+        self.faces = []
+        self.name = name
+        
+        self.mymesh = bpy.data.meshes.new(self.name)
+        self.myobject = bpy.data.objects.new(self.name, self.mymesh)
+        scene = bpy.context.scene
+        scene.collection.objects.link(self.myobject)
+        
+        # 3D cursor location
+        # we use only X,Y increments :D
+        
+        self.cursor = bpy.context.scene.cursor.location
+        self.cursor_orig = copy.copy(bpy.context.scene.cursor.location) 
+  
+    
+    def add_face(self, distance):
+        "add a new poly at distance"
+        
+        v0 = (self.cursor.x, self.cursor.y - self.half_width, self.cursor.z) # top left
+        v1 = (self.cursor.x, self.cursor.y + self.half_width, self.cursor.z) # bottom left
+        v2 = (self.cursor.x + distance, self.cursor.y + self.half_width, self.cursor.z) # bottom right
+        v3 = (self.cursor.x + distance, self.cursor.y - self.half_width, self.cursor.z) # top right
+    
+        
+        if len(self.faces) == 0:
+            # add four vertex, and create face
+            self.vertex.extend([v0,v1,v2,v3])
+            face = [(0, 3, 2, 1)]
+        else:
+            # we have vertex created, so only add 2
+            self.vertex.extend([v2,v3])
+            l = len(self.vertex)
+            face = [(l-3, l-1, l-2, l-4)]
+            
+        self.faces.extend(face)
+        
+        #print(self.vertex)
+        #print(self.faces)
+        
+        bpy.context.scene.cursor.location.x += distance
+        #self.cursor = bpy.context.scene.cursor.location
+        
+        
+    def build(self):
+        self.mymesh.from_pydata(self.vertex, [], self.faces)
+        self.mymesh.update(calc_edges=True)
+        bpy.context.scene.cursor.location = self.cursor_orig
+       
+        return(self.myobject)
+
+
+
+
+
+
 def chunk(it, size):
     "chunk an array in sizes of size elements"
     
@@ -118,13 +181,13 @@ def findConnectedVerts(v_index, mesh, connected_verts, marked_edges, maxdepth=1,
     if level >= maxdepth:
         return
 
-    edges = BL_UTILS.getEdgesForVertex(v_index, mesh, marked_edges)
+    edges = getEdgesForVertex(v_index, mesh, marked_edges)
 
     for e in edges:
         othr_v_index = [idx for idx in mesh.edges[e.index].verts if idx != v_index][0]
         connected_verts[othr_v_index] = True
         marked_edges.append(e.index)
-        BL_UTILS.findConnectedVerts(othr_v_index, mesh, connected_verts, marked_edges, maxdepth=maxdepth, level=level+1)
+        findConnectedVerts(othr_v_index, mesh, connected_verts, marked_edges, maxdepth=maxdepth, level=level+1)
 
     # connected_verts = {}
     # marked_edges = []
@@ -360,17 +423,53 @@ def plane_to_vertex(plane, calc_centers=False):
 
         all_points += [item for sublist in edges for item in sublist]
         if calc_centers:
-            c1 = BL_TOOLS.DummyVector(e_1[0].co + (e_1[1].co - e_1[0].co)/2) # right median
-            c2 = BL_TOOLS.DummyVector(e_2[0].co + (e_2[1].co - e_2[0].co)/2) # left median
-            #c3 = BL_TOOLS.DummyVector(e_1[0].co + (e_2[1].co - e_1[0].co)/2) # avg center
-            #c4 = BL_TOOLS.DummyVector(e_2[0].co + (e_1[1].co - e_2[0].co)/2) # avg center
-            #c5 = BL_TOOLS.DummyVector(e_2[1].co + (e_2[1].co - e_1[1].co)/2) # top median
-            #c6 = BL_TOOLS.DummyVector(e_2[0].co + (e_2[0].co - e_1[0].co)/2) # bottom median
+            c1 = DummyVector(e_1[0].co + (e_1[1].co - e_1[0].co)/2) # right median
+            c2 = DummyVector(e_2[0].co + (e_2[1].co - e_2[0].co)/2) # left median
+            #c3 = DummyVector(e_1[0].co + (e_2[1].co - e_1[0].co)/2) # avg center
+            #c4 = DummyVector(e_2[0].co + (e_1[1].co - e_2[0].co)/2) # avg center
+            #c5 = DummyVector(e_2[1].co + (e_2[1].co - e_1[1].co)/2) # top median
+            #c6 = DummyVector(e_2[0].co + (e_2[0].co - e_1[0].co)/2) # bottom median
             #all_points += [c1, c2, c3, c4, c5, c6]
             all_points += [c1, c2]
     
     return { 'points': all_points, 'edges': all_edges }
 
+def get_curve_length(curve):
+    """return the approx length of a curve
+    
+    Arguments:
+        curve {string} -- the name of the object's curve
+    
+    Returns:
+        float -- the length
 
+    """
+    obj = bpy.data.objects[curve]
+    points = bpy.data.curves[curve].splines.active.points
+    distance = 0.0
+
+    for i in range(len(points)-1):
+        v0 = obj.matrix_world @ points[i].co.xyz
+        v1 = obj.matrix_world @ points[i+1].co.xyz
+
+        distance += (v0 - v1).length
+    return(distance)
+    
   
+def set_origin_to_beginning(curve):
+    """set the origin of the curve to the first point
+    
+    Arguments:
+        curve {string} -- The blender's object name of the curve
+    """
 
+    obj = bpy.data.objects[curve]
+    #put the origin of the object in the first point
+    new_origin = obj.data.splines.active.points[0].co.xyz
+    obj.data.transform(Matrix.Translation(-new_origin))
+    obj.matrix_world.translation += new_origin    
+    return(obj, new_origin)
+    # if you apply, you go to (0,0,0)
+    # apply all transformations
+    # obj.data.transform(obj.matrix_world)
+    # obj.matrix_world = mathutils.Matrix()

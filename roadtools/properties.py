@@ -39,6 +39,12 @@ class ROADTools_Properties(PropertyGroup):
         subtype='FILE_PATH' 
     )
 
+    gpx_length: bpy.props.FloatProperty(
+        name="gpx length in meters",
+        description="GPX length (read from import)",
+        default=0.0
+    )
+
     # the bounding box
     
     minLat: bpy.props.FloatProperty(
@@ -108,12 +114,41 @@ class ROADTools_Properties(PropertyGroup):
     right: bpy.props.FloatProperty(
         name="extend right",
         description="extend minimum longitude (m)",
-         precision = 4,
+        precision = 4,
         min = 0.,
         max = 99999999.,
         default=500
-    )    
+    )
 
+    satellite: bpy.props.BoolProperty(
+        name="Download Satellite terrain",
+        description="If true, donwload satellite texture",
+        default=False
+    )
+
+    road_hires: bpy.props.BoolProperty(
+        name="Generate a road in high resolution",
+        description="If true, generate a road in high resolution",
+        default=False
+    )
+
+    road_width: bpy.props.FloatProperty(
+        name="road width, in meters (segment)",
+        description="road width (m)",
+        precision = 2,
+        min = 0.,
+        max = 100.,
+        default=6
+    )
+    
+    road_height: bpy.props.FloatProperty(
+        name="road height, in meters (segment)",
+        description="road height (m)",
+        precision = 2,
+        min = 0.,
+        max = 100.,
+        default=4
+    )
 
 
     terrain_mesh: PointerProperty(

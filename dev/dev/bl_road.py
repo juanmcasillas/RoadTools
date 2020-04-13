@@ -154,8 +154,9 @@ def create_road_from_gpx(name, width):
     road.modifiers.new("Curve","CURVE")
     road.modifiers['Curve'].object = ob
     
-    
-create_road_from_gpx("myroad",6)
+
+
+#create_road_from_gpx("myroad",6)
 
 
 

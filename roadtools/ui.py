@@ -16,7 +16,7 @@ _isBlender280 = bpy.app.version[1] >= 80
 addon_name = __package__ # when a file in package
 
 # ------------------------------------------------------------------------
-# first panel. Select the GPX file, smooth it and calculate the 
+# GPX Panel. Select the GPX file, smooth it and calculate the 
 # bounding box for the terrain
 # ------------------------------------------------------------------------
 
@@ -39,13 +39,14 @@ class OBJECT_PT_Panel_LoadGPX(bpy.types.Panel):
         col = layout.column()
         roadtools = scene.roadtools
 
-        col.prop_search(roadtools, "gpx_file", context.scene, "objects", text="File GPX",icon="MESH_GRID")
+        col.prop(roadtools, "gpx_file", text="File GPX",icon="MESH_GRID")
         self.layout.operator("roadtools.load_gpx", icon='SCRIPT', text="Load GPX")
 
 
 # ------------------------------------------------------------------------
-# first panel. Select the terrain bounding box, and set the optional
-# extender in meters 
+# Terrain Loading. Select the terrain bounding box, and set the optional
+# extender in meters. Configure if you want to download satellite image
+# from google, or if you prefer create a fake terrain (flat)
 # ------------------------------------------------------------------------
 
 class OBJECT_PT_Panel_BoundingBox(bpy.types.Panel):
@@ -103,6 +104,9 @@ class OBJECT_PT_Panel_BoundingBox(bpy.types.Panel):
 
         box = layout.box()
         row = box.row(align=True)
+        row.prop(addon,"satellite")
+       
+        row = box.row(align=True)
         row.operator("roadtools.expand_terrain", icon='ARROW_LEFTRIGHT', text="Expand Terrain")  
         row = box.row(align=True)        
         row.operator("roadtools.download_terrain", icon='BLANK1', text="Download Terrain") 
@@ -110,12 +114,9 @@ class OBJECT_PT_Panel_BoundingBox(bpy.types.Panel):
         row.operator("roadtools.fake_terrain", icon='AUTO', text="Create Fake Terrain")           
 
 
-
-
-
 # ------------------------------------------------------------------------
-# Second panel. Select the terrain and gpx and calculate the thing, 
-# pressing the button
+# Match the GPX and the terrain in the same point, and move it to the 
+# (0,0,0) (world origin)
 # ------------------------------------------------------------------------
 
 class OBJECT_PT_Panel_TerrainMatch(bpy.types.Panel):
@@ -137,16 +138,46 @@ class OBJECT_PT_Panel_TerrainMatch(bpy.types.Panel):
         col = layout.column()
         roadtools = scene.roadtools
 
-        col.prop_search(roadtools, "terrain_mesh", context.scene, "objects", text="Terrain",icon="MESH_GRID")
-        col.prop_search(roadtools, "road_curve", context.scene, "objects", text="Road Curve", icon="FCURVE")
+        col.prop_search(roadtools, "terrain_mesh", bpy.data, "meshes", text="Terrain",icon="MESH_GRID")
+        col.prop_search(roadtools, "road_curve", bpy.data, "curves", text="Road Curve", icon="FCURVE")
         self.layout.operator("roadtools.match_terrain", icon='SCRIPT', text="Match Terrain Road")
 
 
+
 # ------------------------------------------------------------------------
-# second panel. Select the terrain and gpx and calculate the thing, 
-# pressing the button
-# TODO
+# Road Panel. Creates a road using the curve provided
 # ------------------------------------------------------------------------
+
+class OBJECT_PT_Panel_CreateRoad(bpy.types.Panel):
+    bl_idname = "OBJECT_PT_Panel_CreateRoad"
+    bl_label = "Create a Road"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+    bl_category = "RoadTools"
+
+    # panel in object mode
+    @classmethod
+    def poll(self,context):
+        return context.mode == 'OBJECT'
+
+    def draw(self, context):
+        scene = context.scene
+        layout = self.layout
+        col = layout.column()
+        roadtools = scene.roadtools
+
+        col.prop(roadtools, "road_width", text="Road Width")
+        col.prop(roadtools, "road_height",text="Road Height")
+        col.prop(roadtools, "gpx_length",text="Road Length")
+        col.prop(roadtools, "road_hires", text="Road in High Res")
+        col.prop_search(roadtools, "road_curve", bpy.data, "curves", text="Road Curve", icon="FCURVE")
+        self.layout.operator("roadtools.create_road", icon='SCRIPT', text="Create Road")
+
+
+
+
+
+
 
 class OBJECT_PT_Panel_TerrainFlatten(bpy.types.Panel):
     bl_idname = "OBJECT_PT_Panel_TerrainFlatten"
@@ -183,6 +214,7 @@ class OBJECT_PT_Panel_TerrainFlatten(bpy.types.Panel):
                 )
         self.layout.operator("roadtools.flatten_terrain", icon='SCRIPT', text="Flatten Terrain Road")
 
+
 # ------------------------------------------------------------------------
 # register / unregister
 # ------------------------------------------------------------------------
@@ -191,6 +223,9 @@ classes = (
     OBJECT_PT_Panel_LoadGPX,
     OBJECT_PT_Panel_BoundingBox,
     OBJECT_PT_Panel_TerrainMatch,
+    OBJECT_PT_Panel_CreateRoad,
+
+
     OBJECT_PT_Panel_TerrainFlatten
 )
 
