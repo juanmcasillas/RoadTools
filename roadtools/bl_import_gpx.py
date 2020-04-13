@@ -12,7 +12,7 @@
 #  * add the curve to the roadtools properties
 #  * set a global name instead the filename
 #
-# a = BL_IMPORTGPX()
+# a = BL_IMPORT_GPX()
 # a.import_gpx("/Archive/Src/RoadTools/gpx/mijares.gpx")
 # print(a.bounding_box)
 # a.bounding_box.expand(1000,500,500,1000)
@@ -27,7 +27,7 @@ from default_projection import DefaultProjection
 
 _isBlender280 = bpy.app.version[1] >= 80
 
-class BL_IMPORTGPX():
+class BL_IMPORT_GPX():
 
     def __init__(self, ignoreGeoreferencing=False, useElevation=True, importType='curve',
                 expand_top = 0.0, expand_left = 0.0, expand_right = 0.0, expand_bottom = 0.0):
@@ -49,7 +49,7 @@ class BL_IMPORTGPX():
         self.bounding_box = None
         self.points = None
 
-    def import_gpx(self, filepath):
+    def import_gpx(self, filepath,name=None):
         
         self.filepath = filepath
 
@@ -60,13 +60,13 @@ class BL_IMPORTGPX():
                 if not bpy.context.view_layer.objects.active:
                     bpy.context.view_layer.objects.active = bpy.context.scene.collection.objects[0]
             else:
-                if not cbpy.ontext.scene.objects.active:
+                if not bpy.ontext.scene.objects.active:
                     bpy.context.scene.objects.active = bpy.context.scene.objects[0]
             bpy.ops.object.mode_set(mode="OBJECT")
         
         bpy.ops.object.select_all(action="DESELECT")
         
-        name = os.path.basename(self.filepath)
+        name = name or os.path.basename(self.filepath)
         
         if self.importType == "curve":
             obj = self.makeCurve(bpy.context, name)
@@ -90,12 +90,12 @@ class BL_IMPORTGPX():
             obj.select = True
             bpy.context.scene.update()
         
-        return(("INFO", "Done"))
+        return(("INFO", "Done", obj))
 
 
     def read_gpx_file(self, context):
         
-        points, bb = core.smooth.smooth_gpx(self.filepath, optimize=True, ground=False, output=None )
+        points, bb = core.smooth.smooth_gpx(self.filepath, optimize=True, ground=False, output=None)
         
         self.points = points
         self.bounding_box = bb
@@ -154,15 +154,14 @@ class BL_IMPORTGPX():
                     self.spline.points.add(1)
                 v = projection.fromGeographic(point[0], point[1])
                 self.setSplinePoint((v[0], v[1], point[2] if self.useElevation and len(point)==3 else 0))
-               
+
         # cleanup
         self.curve = None
         self.spline = None
-        
-        return bpy.data.objects.new(name, curve)
-    
 
-    
+        return bpy.data.objects.new(name, curve)
+
+
     def createSpline(self, curve=None):
         if not curve:
             curve = self.curve
@@ -172,10 +171,10 @@ class BL_IMPORTGPX():
     def setSplinePoint(self, point):
         self.spline.points[self.pointIndex].co = (point[0], point[1], point[2], 1.)
         self.pointIndex += 1
-    
 
 
-#a = BL_IMPORTGPX()
+
+#a = BL_IMPORT_GPX()
 #a.import_gpx("/Archive/Src/RoadTools/gpx/mijares.gpx")
 #print(a.bounding_box)
 #a.bounding_box.expand(1000,500,500,1000)

@@ -9,7 +9,6 @@
 # 
 # ############################################################################
 import bpy
-from bl_utils import BL_ROAD_UTILS
 import os.path
 
 from bpy.props import (StringProperty,
@@ -26,7 +25,8 @@ from bpy.types import (Panel,
                        PropertyGroup,
                        )
 
-from bl_import_gpx import BL_IMPORTGPX
+from bl_import_gpx import BL_IMPORT_GPX
+from core.gpxbb import GPX_BB_bounds, GPX_BB
 
 class ROADTOOLS_OT_Expand_Terrain(Operator):
     bl_idname = 'roadtools.expand_terrain'
@@ -41,7 +41,7 @@ class ROADTOOLS_OT_Expand_Terrain(Operator):
         # get the types, check they are fine
         #
 
-        from core.gpxbb import GPX_BB_bounds, GPX_BB
+        
 
         bounds = GPX_BB_bounds(roadtools.maxLat, roadtools.minLon, roadtools.maxLon, roadtools.minLat)
         gpx_bb = GPX_BB( bounds )

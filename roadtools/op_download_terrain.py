@@ -14,7 +14,6 @@
 # 
 # ############################################################################
 import bpy
-from bl_utils import BL_ROAD_UTILS
 import os.path
 
 from bpy.props import (StringProperty,
@@ -31,12 +30,14 @@ from bpy.types import (Panel,
                        PropertyGroup,
                        )
 
-from bl_import_gpx import BL_IMPORTGPX
-# ------------------------------------------------------------------------
-# load_gpx
-# See the ROADTOOLS_OT_MatchTerrain convention, to roadtools.match_terrain Function.
+from bl_import_gpx import BL_IMPORT_GPX
+
+# ---------------------------------------------------------------------------
+# Note about class naming
+# See the ROADTOOLS_OT_Download_Terrain convention, to 
+# roadtools.download_terrain Function.
 # the name MUST BE follow allways this convention
-# ------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 
 class ROADTOOLS_OT_Download_Terrain(Operator):
     bl_idname = 'roadtools.download_terrain'
@@ -58,7 +59,8 @@ class ROADTOOLS_OT_Download_Terrain(Operator):
         bpy.context.scene.blender_osm.maxLon = roadtools.maxLon
         bpy.context.scene.blender_osm.minLat = roadtools.minLat
         bpy.ops.blender_osm.import_data()        
-
+        # get the value and set my pointer to the terrain
+        scene.roadtools.terrain_mesh = bpy.data.objects[bpy.context.scene.blender_osm.terrainObject]
         level = 'INFO'
         msg = "Terrain Downloaded type='%s'" % terrain_type
         self.report({level}, 'RoadTools: Download Terrain: %s' % msg)

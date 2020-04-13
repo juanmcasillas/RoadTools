@@ -14,7 +14,6 @@
 # 
 # ############################################################################
 import bpy
-from bl_utils import BL_ROAD_UTILS
 import os.path
 
 from bpy.props import (StringProperty,
@@ -31,8 +30,8 @@ from bpy.types import (Panel,
                        PropertyGroup,
                        )
 
-from bl_import_gpx import BL_IMPORTGPX
-
+from bl_import_gpx import BL_IMPORT_GPX
+from bl_fake_terrain import BL_FAKETERRAIN
 
 class ROADTOOLS_OT_Fake_Terrain(Operator):
     bl_idname = 'roadtools.fake_terrain'
@@ -47,15 +46,16 @@ class ROADTOOLS_OT_Fake_Terrain(Operator):
         # get the types, check they are fine
         #
 
-        from bl_fake_terrain import BL_FAKETERRAIN
+
 
         a = BL_FAKETERRAIN(roadtools.maxLat, roadtools.minLon, roadtools.maxLon, roadtools.minLat)
-        a.create('Terrain',  roadtools.top, roadtools.left, roadtools.right, roadtools.bottom)       
+        ret, msg, obj = a.create('Terrain',  roadtools.top, roadtools.left, roadtools.right, roadtools.bottom)       
 
         scene.roadtools.maxLat =  a.BB.top
         scene.roadtools.minLon =  a.BB.left
         scene.roadtools.maxLon =  a.BB.right
         scene.roadtools.minLat =  a.BB.bottom
+        scene.roadtools.terrain_mesh = obj
 
         level = 'INFO'
         msg = "new size: %3.2f width (m) x %3.2f height(m) " % (a.BB.width, a.BB.height)

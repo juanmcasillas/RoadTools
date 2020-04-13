@@ -5,10 +5,9 @@
 # bl_utils.py
 # 04/13/2020 (c) Juan M. Casillas <juanm.casillas@gmail.com>
 #
-# Define some global helpers, "debug" information and so on
+# Define some helper class, and lot of useful function
 # 
 # ############################################################################
-
 
 import bpy
 from mathutils import Vector, Matrix, Euler
@@ -18,11 +17,9 @@ from itertools import islice
 import copy
 
 class BL_DEBUG:
-    def __init__(self):
-        pass
-
+ 
     def set_mark(p, kind='ARROWS', scale=None):
-        "add an emtpy in p point"
+        "add an emtpy in p point to test the position"
         # can be also PLAIN_AXES
         o = bpy.data.objects.new( "empty", None )
         o.empty_display_type = kind
@@ -39,47 +36,95 @@ class BL_DEBUG:
                 bpy.data.objects.remove(o) 
 
 
-class BL_UTILS:
+class TimeIt:
+    "measures the time between the creation of the class, and calling stop()"
     def __init__(self):
-        pass
+        self.t_start = time.time()
+        self.t_stop = None
 
-    def chunk(it, size):
-        "chunk an array in sizes of size elements"
-        
-        it = iter(it)
-        return iter(lambda: tuple(islice(it, size)), ())
-        
-    def get_3dcur():
-        "return the position of the 3d cursor"
-        return bpy.context.scene.cursor.location
+    def stop(self):
+        self.t_stop = time.time()
+        self.t_delta = self.t_stop - self.t_start
+
+    def convert(self, seconds): 
+        min, sec = divmod(seconds, 60) 
+        hour, min = divmod(min, 60) 
+        return "%d:%02d:%03.2f" % (hour, min, sec) 
+
+    def __repr__(self):
+        s_start = time.strftime('%H:%M:%S', time.localtime(self.t_start))
+        s_stop = time.strftime('%H:%M:%S', time.localtime(self.t_stop))
+        s_delta = self.convert(self.t_delta)
+        s = "start=%s stop=%s delta=%s" % (s_start, s_stop, s_delta)
+        return(s)
 
 
-    def getEdgesForVertex(v_index, mesh, marked_edges):
+class DummyVector:
+    "to add the .co attribute and work as a vertex"
+    def __init__(self,v):
+        self.co = v
 
-        all_edges = []
-        for e in mesh.edges:
-            for v in e.verts:
-                if v.index == v_index:
-                    all_edges.append(e)
 
-        #all_edges = [e for e in mesh.edges if v_index in e.verts]
-        #print("all_edges", all_edges)
-        #print(mesh.edges[0].verts[0])
+class NearestData:
+    "stores the nearest data from a point to a vertex"
+    def __init__(self, pos):
+        self.pos = 'RIGHT'
+        if pos != 0: self.pos = 'LEFT'
+        self.face = None
+        self.vertex = None
+        self.edges = []
+        self.distance = sys.maxsize
+        self.point = None
 
-        unmarked_edges = [e for e in all_edges if e.index not in marked_edges]
-        return unmarked_edges
+    def __repr__(self):
+        return "<Nearest face:%s vertex:%s edges:%s distance:%5.8f point:%s pos: %s>" % (
+            self.face, 
+            self.vertex, 
+            self.edges,
+            self.distance, 
+            self.point,
+            self.pos
+        )
 
-    def findConnectedVerts(v_index, mesh, connected_verts, marked_edges, maxdepth=1, level=0):  
-        if level >= maxdepth:
-            return
 
-        edges = BL_UTILS.getEdgesForVertex(v_index, mesh, marked_edges)
 
-        for e in edges:
-            othr_v_index = [idx for idx in mesh.edges[e.index].verts if idx != v_index][0]
-            connected_verts[othr_v_index] = True
-            marked_edges.append(e.index)
-            BL_UTILS.findConnectedVerts(othr_v_index, mesh, connected_verts, marked_edges, maxdepth=maxdepth, level=level+1)
+def chunk(it, size):
+    "chunk an array in sizes of size elements"
+    
+    it = iter(it)
+    return iter(lambda: tuple(islice(it, size)), ())
+
+def get_3dcur():
+    "return the position of the 3d cursor"
+    return bpy.context.scene.cursor.location
+
+def getEdgesForVertex(v_index, mesh, marked_edges):
+    "get all the edges for a given vertex"
+    all_edges = []
+    for e in mesh.edges:
+        for v in e.verts:
+            if v.index == v_index:
+                all_edges.append(e)
+
+    #all_edges = [e for e in mesh.edges if v_index in e.verts]
+    #print("all_edges", all_edges)
+    #print(mesh.edges[0].verts[0])
+
+    unmarked_edges = [e for e in all_edges if e.index not in marked_edges]
+    return unmarked_edges
+
+def findConnectedVerts(v_index, mesh, connected_verts, marked_edges, maxdepth=1, level=0):  
+    "find all the conected vertex (loop). Recursive function"
+    if level >= maxdepth:
+        return
+
+    edges = BL_UTILS.getEdgesForVertex(v_index, mesh, marked_edges)
+
+    for e in edges:
+        othr_v_index = [idx for idx in mesh.edges[e.index].verts if idx != v_index][0]
+        connected_verts[othr_v_index] = True
+        marked_edges.append(e.index)
+        BL_UTILS.findConnectedVerts(othr_v_index, mesh, connected_verts, marked_edges, maxdepth=maxdepth, level=level+1)
 
     # connected_verts = {}
     # marked_edges = []
@@ -87,206 +132,245 @@ class BL_UTILS:
     # print(",".join([str(v) for v in connected_verts.keys()]))
 
 
-    def triangulate_face_quad(bm, face_idx):
+def triangulate_face_quad(bm, face_idx):
+    "triangulates a face. Can be a triange or a quad"
 
-        bm.verts.ensure_lookup_table()
-        bm.edges.ensure_lookup_table()
-        bm.faces.ensure_lookup_table()
+    bm.verts.ensure_lookup_table()
+    bm.edges.ensure_lookup_table()
+    bm.faces.ensure_lookup_table()
 
-        # work on selected face
-        f = bm.faces[face_idx]
-        
-        verts = []
-        for v in f.verts:
-            verts.append(bm.verts[v.index])
-            
-        vcenter = bm.verts.new(f.calc_center_median())
-        bmesh.ops.delete(bm, geom=[f], context='FACES_ONLY')
-
-        bm.verts.ensure_lookup_table()
-        for v in verts:
-            bm.edges.new((v, vcenter))
-
-        # ugly, but works XD
-
-        if len(verts) == 3:
-            f1 = [verts[0], verts[1], vcenter]
-            f2 = [verts[1], verts[2], vcenter]
-            f3 = [verts[2], verts[0], vcenter]
-            bmesh.ops.contextual_create(bm, geom= f1)
-            bmesh.ops.contextual_create(bm, geom= f2)
-            bmesh.ops.contextual_create(bm, geom= f3)
-
-        if len(verts) == 4:
-            f1 = [verts[0], verts[1], vcenter]
-            f2 = [verts[1], verts[2], vcenter]
-            f3 = [verts[2], verts[3], vcenter]
-            f4 = [verts[3], verts[0], vcenter]
-            bmesh.ops.contextual_create(bm, geom= f1)
-            bmesh.ops.contextual_create(bm, geom= f2)
-            bmesh.ops.contextual_create(bm, geom= f3)
-            bmesh.ops.contextual_create(bm, geom= f4)
-
-        bm.verts.index_update()
-        bm.faces.index_update()
-
-    # ####################################################################################################
-    #
-    # AssembleOverrideContextForView3dOps
-    # override the enviroment so knife_project can be run on python script
-    #
-    # ####################################################################################################
-    def AssembleOverrideContextForView3dOps():
-        #=== Iterates through the blender GUI's windows, screens, areas, regions to find the View3D space and its associated window.  Populate an 'oContextOverride context' that can be used with bpy.ops that require to be used from within a View3D (like most addon code that runs of View3D panels)
-        # Tip: If your operator fails the log will show an "PyContext: 'xyz' not found".  To fix stuff 'xyz' into the override context and try again!
-        for oWindow in bpy.context.window_manager.windows:          ###IMPROVE: Find way to avoid doing four levels of traversals at every request!!
-            oScreen = oWindow.screen
-            for oArea in oScreen.areas:
-                if oArea.type == 'VIEW_3D':                         ###LEARN: Frequently, bpy.ops operators are called from View3d's toolbox or property panel.  By finding that window/screen/area we can fool operators in thinking they were called from the View3D!
-                    for oRegion in oArea.regions:
-                        if oRegion.type == 'WINDOW':                ###LEARN: View3D has several 'windows' like 'HEADER' and 'WINDOW'.  Most bpy.ops require 'WINDOW'
-                            #=== Now that we've (finally!) found the damn View3D stuff all that into a dictionary bpy.ops operators can accept to specify their context.  I stuffed extra info in there like selected objects, active objects, etc as most operators require them.  (If anything is missing operator will fail and log a 'PyContext: error on the log with what is missing in context override) ===
-                            oContextOverride = {'window': oWindow, 'screen': oScreen, 'area': oArea, 'region': oRegion, 'scene': bpy.context.scene, 'edit_object': bpy.context.edit_object, 'active_object': bpy.context.active_object, 'selected_objects': bpy.context.selected_objects}   # Stuff the override context with very common requests by operators.  MORE COULD BE NEEDED!
-                            #print("-AssembleOverrideContextForView3dOps() created override context: ", oContextOverride)
-                            return oContextOverride
-        raise Exception("ERROR: AssembleOverrideContextForView3dOps() could not find a VIEW_3D with WINDOW region to create override context to enable View3D operators.  Operator cannot function.")
-
-
-
-
-class BL_ROAD_UTILS:
-    def __init__(self):
-        pass
-
-    def get_curve_points(curve):
-
-        obj_s=  bpy.data.objects[curve]
-  
-        bpy.ops.object.select_all(action='DESELECT')
-        bpy.ops.object.select_pattern(pattern=obj_s.name)
-
-        if obj_s.type != 'CURVE':
-            bpy.ops.object.convert(target='MESH', keep_original=True)
-            newobj= bpy.context.object
-            #points = list(map(lambda p: (p.co.x, p.co.y, p.co.z) ,new_obj.data.vertices))
-            points = list(new_obj.data.vertices)
-            bpy.data.objects.remove(newobj, do_unlink=True) 
-        else:
-            #points = list(map(lambda p: (p.co.x, p.co.y, p.co.z) ,newobj.data.splines.active.points))
-            points = list(obj_s.data.splines.active.points)
-
-        return(points)
-
-    def get_closest_point( target, point ):
-
-        obj = bpy.data.objects[target]
-        return (obj.closest_point_on_mesh( point ))
-        #result, Whether closest point on geometry was found, boolean
-        #location, The location on the object closest to the point, float array of 3 items in [-inf, inf]
-        #normal, The face normal at the closest point, float array of 3 items in [-inf, inf]
-        #index, The face index, -1 when original data isn’t available, int in [-inf, inf]
-
-    def set_terrain_origin(curve,terrain):
-        """get curve object, get the first point, set the origin of the curve, then project it over the
-        terrain, set the terrain origin, move both things to the world origin. This is very helpful to
-        automatically align GPX + OSM terrain. If you plan to add a texture, do it BEFORE calling this
-        function
-        """
-
-        obj_s=  bpy.data.objects[curve]
-        obj_t=  bpy.data.objects[terrain]
-        mesh_t = bpy.data.meshes[obj_t.data.name]
-
-        points = BL_ROAD_UTILS.get_curve_points(curve)
-        first_point = points[0]
-        
-        #ray_cast (this is important)
-        #result, boolean
-        #location, The hit location of this ray cast, float array of 3 items in [-inf, inf]
-        #normal, The face normal at the ray cast hit location, float array of 3 items in [-inf, inf]
-        #index, The face index, -1 when original data isn’t available, int in [-inf, inf]
-        #object, Ray cast object, Object
-        #matrix, Matrix, float multi-dimensional array of 4 * 4 items in [-inf, inf]
-
-        result, location, normal, index, object, matrix = bpy.context.scene.ray_cast( 
-            bpy.context.view_layer, 
-            first_point.co.xyz, 
-            (0,0,-1) # Z Down
-        )
-        #BL_DEBUG.set_mark( obj_s.matrix_world @ location )
-
-        if result:
-            # move the terrain
-            bpy.data.meshes[terrain].polygons[index].select = True
-            origin = bpy.data.meshes[terrain].polygons[index].center
-            obj_t.data.transform(Matrix.Translation(-origin))
-            obj_t.matrix_world.translation += origin
-
-            # move the curve
-            origin = first_point
-            bpy.context.scene.cursor.location = obj_s.matrix_world @ first_point.co.xyz
-            bpy.context.view_layer.objects.active = obj_s
-            bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
-            obj_s.location = (0,0,0)
-            bpy.context.scene.cursor.location = (0,0,0)
-        else:
-            return(("ERROR", "Can't found terrain below the curve"))
-        return(("INFO", "Done"))
-
-    def cut_road(plane, terrain, height=9000):
-        
-        #
-        # must be in OBJECT mode to work.
-        # run on isolation
-        # a face on the terrain must be selected in order to zoom works 
-        # and the cut is well done
-        # face selected on mesh is the first point of the plane, so first do a set_terrain_origin()
-        #
-        bpy.ops.object.select_all(action='DESELECT')
-
-        obj_s = bpy.data.objects[plane]
-        obj_t = bpy.data.objects[terrain]
-
-        # move upwards too high so we can 
-        # 1) ray cast
-        # 2) do a full projection
-        
-        obj_s.location = obj_s.location + Vector((0,0,height))
-        #bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
-
-        BL_DEBUG.set_mark(Vector((0,0,0)))
-
-          
-        
-        bpy.ops.object.select_all(action='DESELECT')
-        bpy.context.view_layer.objects.active = bpy.data.objects[terrain]
-
-        oContextOverride = BL_UTILS.AssembleOverrideContextForView3dOps()      
-        bpy.data.objects['empty'].select_set(True)
-        bpy.ops.view3d.view_selected(oContextOverride) 
-        bpy.ops.object.delete()
-
-        bpy.data.objects[plane].select_set(True)
-        bpy.data.objects[terrain].select_set(True)
-        bpy.ops.object.mode_set(mode='EDIT', toggle=False)
-        oContextOverride = BL_UTILS.AssembleOverrideContextForView3dOps()      
-        bpy.ops.view3d.view_axis(oContextOverride, type='TOP')
-        bpy.ops.view3d.zoom(oContextOverride,delta=50000)
-        bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1) 
-        bpy.ops.mesh.knife_project(oContextOverride)
-
-        bpy.data.objects[plane].select_set(False)
-        bpy.ops.mesh.delete(type='FACE')
-
-        obj_s.location = obj_s.location - Vector((0,0,height))    
-        bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
-        #bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    # work on selected face
+    f = bm.faces[face_idx]
     
+    verts = []
+    for v in f.verts:
+        verts.append(bm.verts[v.index])
         
-# TEST_IT
-if False:
-    #BL_ROAD_UTILS.set_terrain_origin('outpux.gpx','Terrain')
-    BL_ROAD_UTILS.cut_road('Plane','Terrain')
+    vcenter = bm.verts.new(f.calc_center_median())
+    bmesh.ops.delete(bm, geom=[f], context='FACES_ONLY')
+
+    bm.verts.ensure_lookup_table()
+    for v in verts:
+        bm.edges.new((v, vcenter))
+
+    # ugly, but works XD
+
+    if len(verts) == 3:
+        f1 = [verts[0], verts[1], vcenter]
+        f2 = [verts[1], verts[2], vcenter]
+        f3 = [verts[2], verts[0], vcenter]
+        bmesh.ops.contextual_create(bm, geom= f1)
+        bmesh.ops.contextual_create(bm, geom= f2)
+        bmesh.ops.contextual_create(bm, geom= f3)
+
+    if len(verts) == 4:
+        f1 = [verts[0], verts[1], vcenter]
+        f2 = [verts[1], verts[2], vcenter]
+        f3 = [verts[2], verts[3], vcenter]
+        f4 = [verts[3], verts[0], vcenter]
+        bmesh.ops.contextual_create(bm, geom= f1)
+        bmesh.ops.contextual_create(bm, geom= f2)
+        bmesh.ops.contextual_create(bm, geom= f3)
+        bmesh.ops.contextual_create(bm, geom= f4)
+
+    bm.verts.index_update()
+    bm.faces.index_update()
+
+# ####################################################################################################
+#
+# AssembleOverrideContextForView3dOps
+# override the enviroment so knife_project can be run on python script
+#
+# ####################################################################################################
+def AssembleOverrideContextForView3dOps():
+    "overrides the environment so we can call knife-project from a script"
+    #=== Iterates through the blender GUI's windows, screens, areas, regions to find the View3D 
+    # space and its associated window.  Populate an 'oContextOverride context' that can be used 
+    # with bpy.ops that require to be used from within a View3D (like most addon code that 
+    # runs of View3D panels)
+    # Tip: If your operator fails the log will show an "PyContext: 'xyz' not found".  
+    # To fix stuff 'xyz' into the override context and try again!
+    ###IMPROVE: Find way to avoid doing four levels of traversals at every request!!
+    for oWindow in bpy.context.window_manager.windows:          
+        oScreen = oWindow.screen
+        for oArea in oScreen.areas:
+            if oArea.type == 'VIEW_3D':                         
+                ###LEARN: Frequently, bpy.ops operators are called from View3d's 
+                # toolbox or property panel.  By finding that window/screen/area we can 
+                # fool operators in thinking they were called from the View3D!
+                for oRegion in oArea.regions:
+                    if oRegion.type == 'WINDOW':                
+                        ###LEARN: View3D has several 'windows' like 'HEADER' and 'WINDOW'.  
+                        # Most bpy.ops require 'WINDOW'
+                        #=== Now that we've (finally!) found the damn View3D stuff all that into a 
+                        # dictionary bpy.ops operators can accept to specify their context.  
+                        # I stuffed extra info in there like selected objects, active objects, 
+                        # etc as most operators require them.  (If anything is missing operator will 
+                        # fail and log a 'PyContext: error on the log with what is 
+                        # missing in context override) ===
+                        oContextOverride = { 
+                                'window': oWindow, 
+                                'screen': oScreen, 
+                                'area': oArea, 
+                                'region': oRegion, 
+                                'scene': bpy.context.scene, 
+                                'edit_object': bpy.context.edit_object, 
+                                'active_object': bpy.context.active_object, 
+                                'selected_objects': bpy.context.selected_objects}   
+                                # Stuff the override context with very common requests by operators.  MORE COULD BE NEEDED!
+                        #print("-AssembleOverrideContextForView3dOps() created override context: ", oContextOverride)
+                        return oContextOverride
+    raise Exception("ERROR: AssembleOverrideContextForView3dOps() could not find a VIEW_3D with WINDOW region to create override context to enable View3D operators.  Operator cannot function.")
+
+# ####################################################################################################
+#
+# face_edges_by_vert
+#
+# ####################################################################################################
+
+def face_edges_by_vert(face, vert):
+    "given a face, return all the edges that have the given vert index"
+    r = []
+    idx = vert.index if isinstance(vert, bmesh.types.BMVert) else vert
+    #print("-------")
+    for e in face.edges:
+        for v in e.verts:
+            #print(face, e, v, idx)
+            if v.index == idx:
+                r.append(e.index)
+    return(r)
+
+# ####################################################################################################
+#
+# get_raycast
+#
+# ####################################################################################################
+
+def get_raycast(plane, terrain, vertices=None, DEBUG=False, LIMIT=None):
+    "generates a raycast from the points of the plane, to the terrain and store data. Must be only verts"
+    obj_s=  bpy.data.objects[plane]
+    mesh_s = obj_s.data    
+    point_data = []
+    pc = 0
+    
+    vertices = vertices if vertices else mesh_s.vertices
+
+    for v in vertices:
+        #
+        # ok, process them mesh can be Down (should be)
+        # but can be up. so check the results and save the
+        # data. (raycast done in world coords and works)
+        # maybe due it's on (0,0,0) ?
+        #
+        # retrieve i the index of the point, v the point
+
+        # in order to get this working, I have to DELETE the 
+        # faces from the polygon, and use the vertex.
+        # Delete "Only Edges & Faces"
+
+        terrain_down = True
+        DEBUG and BL_DEBUG.set_mark( obj_s.matrix_world @ v.co.xyz, kind="PLAIN_AXES" )
+        result, location, normal, index, r_object, matrix = bpy.context.scene.ray_cast( 
+            bpy.context.view_layer, 
+            obj_s.matrix_world @ v.co.xyz, 
+            #v.normal * -1 # Z Down
+            (0,0,-1.0)
+        )
+        #print("R", result,index, r_object, obj_s.matrix_world @ v.co.xyz  )
+        if result and r_object.name == terrain: 
+            DEBUG and BL_DEBUG.set_mark( location, kind="SPHERE")
+        
+        if not result:
+            result, location, normal, index, r_object, matrix = bpy.context.scene.ray_cast( 
+                bpy.context.view_layer, 
+                obj_s.matrix_world @ v.co.xyz, 
+                #v.normal # Z Up
+                (0,0,1.0)
+            )
+            if not result:
+                # something bizarre happens with that point
+                print("Point %s doesn't match terrain geometry" % v.co.xyz)
+                DEBUG and BL_DEBUG.set_mark(obj_s.matrix_world @ v.co.xyz)
+                continue
+            #print("R2", result,index, r_object )
+            if result and r_object.name == terrain: 
+                DEBUG and BL_DEBUG.set_mark(location, kind="CUBE")
+            ## terrain is upwards
+            terrain_down = False
+
+        # terrain is downwards
+
+        if r_object.name == terrain:
+            #found_dict[key] = True
+            point_data.append( (terrain_down, index, v, location )) # terrain is down, faceindex, point
 
 
-#BL_ROAD_UTILS.cut_road('Plane','Terrain')
+        pc +=1
+        if LIMIT and pc / 4 >= LIMIT:
+            break
+
+    print("ray_cast: total_points %d" % (len(mesh_s.vertices)))
+    return(point_data)
+
+# ####################################################################################################
+#
+# plane_to_vertex get the list of plane, create a mesh and iterate the vertex as planes
+#
+# ####################################################################################################
+
+def plane_to_vertex(plane, calc_centers=False):
+    "get the vertices for plane, generate a list of all vertices as a face and calculate two median points at side"
+    
+    obj_s=  bpy.data.objects[plane]
+    mesh_s = obj_s.data   
+
+    pc = 0
+    idx = 0
+    MESH_VERTEX_LEN = int(len(mesh_s.vertices)/2)-1
+
+    all_edges = []
+    all_points = []
+
+    for pc in range(MESH_VERTEX_LEN):
+        
+        # iterate about the number of quads
+        
+        edges = []
+        if pc == 0:
+            e_1 = [ mesh_s.vertices[0], mesh_s.vertices[1] ] # right
+            e_2 = [ mesh_s.vertices[2], mesh_s.vertices[3] ] # left
+            idx = 1
+        elif pc == 1:
+            e_1 = [ mesh_s.vertices[1], mesh_s.vertices[4] ]  # right     
+            e_2 = [ mesh_s.vertices[3], mesh_s.vertices[5] ]  # left edge
+            idx += 3
+        else:
+            e_1 = [ mesh_s.vertices[idx], mesh_s.vertices[idx+2] ]       # right 
+            e_2 = [ mesh_s.vertices[idx+1], mesh_s.vertices[idx+3] ]     # left edge
+            idx += 2
+
+            
+        # 0 is the right side
+        # 1 is the left side 
+        edges = [ e_1, e_2 ]  
+        all_edges.append(edges)
+        
+        # calculate the center of the edges, so we have more points and avoid the "half split"
+        # problem in the face selector
+
+        all_points += [item for sublist in edges for item in sublist]
+        if calc_centers:
+            c1 = BL_TOOLS.DummyVector(e_1[0].co + (e_1[1].co - e_1[0].co)/2) # right median
+            c2 = BL_TOOLS.DummyVector(e_2[0].co + (e_2[1].co - e_2[0].co)/2) # left median
+            #c3 = BL_TOOLS.DummyVector(e_1[0].co + (e_2[1].co - e_1[0].co)/2) # avg center
+            #c4 = BL_TOOLS.DummyVector(e_2[0].co + (e_1[1].co - e_2[0].co)/2) # avg center
+            #c5 = BL_TOOLS.DummyVector(e_2[1].co + (e_2[1].co - e_1[1].co)/2) # top median
+            #c6 = BL_TOOLS.DummyVector(e_2[0].co + (e_2[0].co - e_1[0].co)/2) # bottom median
+            #all_points += [c1, c2, c3, c4, c5, c6]
+            all_points += [c1, c2]
+    
+    return { 'points': all_points, 'edges': all_edges }
+
+
+  
+

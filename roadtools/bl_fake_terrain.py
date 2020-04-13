@@ -74,7 +74,7 @@ class BL_FAKETERRAIN():
             obj.select = True
             bpy.context.scene.update()
         
-        return {"FINISHED"}
+        return(("INFO", "Done", obj))
 
    
     def makeMesh(self, context, name, top=0.0, left=0.0, bottom=0.0, right=0.0):

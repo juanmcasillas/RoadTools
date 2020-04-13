@@ -10,7 +10,6 @@
 # 
 # ############################################################################
 import bpy
-from bl_utils import BL_ROAD_UTILS
 import os.path
 
 from bpy.props import (StringProperty,
@@ -27,7 +26,7 @@ from bpy.types import (Panel,
                        PropertyGroup,
                        )
 
-from bl_import_gpx import BL_IMPORTGPX
+from bl_import_gpx import BL_IMPORT_GPX
 # ------------------------------------------------------------------------
 # load_gpx
 # See the ROADTOOLS_OT_MatchTerrain convention, to roadtools.match_terrain Function.
@@ -56,20 +55,21 @@ class ROADTOOLS_OT_Load_Gpx(Operator):
             return {"FINISHED"}
 
         level = 'INFO'
-        gpx = BL_IMPORTGPX()
+        gpx = BL_IMPORT_GPX()
         try:
-            ret,msg = gpx.import_gpx(roadtools.gpx_file)
+            ret,msg,obj = gpx.import_gpx(roadtools.gpx_file)
             #a.bounding_box.expand(1000,500,500,1000)
             #print(a.bounding_box)
             scene.roadtools.maxLat =  gpx.bounding_box.top
             scene.roadtools.minLon =  gpx.bounding_box.left
             scene.roadtools.maxLon =  gpx.bounding_box.right
             scene.roadtools.minLat =  gpx.bounding_box.bottom
+            scene.roadtools.road_curve = obj
 
         except Exception as e:
             level = 'ERROR'
             msg = str(e)
-        
+
         self.report({level}, 'RoadTools: Load GPX: %s' % msg)
         return {"FINISHED"}
 
