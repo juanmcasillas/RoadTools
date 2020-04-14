@@ -37,7 +37,8 @@ class BL_JOINER:
 
         # if the plane has any modifiers without apply, apply them
         bpy.ops.object.select_all(action='DESELECT')
-        bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
+        if bpy.ops.object.mode == 'EDIT':
+            bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
 
         self.obj_s.select_set(True)
         bpy.context.view_layer.objects.active = self.obj_s
@@ -54,41 +55,10 @@ class BL_JOINER:
         bpy.context.collection.objects.link(self.obj_copy)
         self.obj_copy.hide_set(True)
 
-
-
         # stop it
         self.time_it.stop()
         print("[t] __init__(): ", self.time_it)
 
-
-    # def do_the_raycast(self):
-    # removed it't not needed, but I'm going to use them right now.
-    # :D
-    #     self.time_it = bl_utils.TimeIt()
-    #     r = bl_utils.plane_to_vertex(self.plane, calc_centers=True)
-
-    #     self.plane_points = r['points']
-    #     self.plane_edges = r['edges']
-
-    #     self.raycast_points =  bl_utils.get_raycast(self.plane, self.terrain,
-    #                                 vertices = self.plane_points,
-    #                                 DEBUG=self.DEBUG, LIMIT=self.LIMIT)
-
-    #     # select the faces below the plane, and flatten them
-
-    #     flatten_faces = []
-    #     for point in self.raycast_points:
-    #         terrain_down, index, point, location = point
-    #         flatten_faces.append(index)
-
-    #     #remove dupes
-    #     flatten_faces = list(set(flatten_faces))
-    #     bl_utils.rotate_mesh_face(self.terrain, flatten_faces, (0,0,1.0) )
-    #     #for f in flatten_faces:
-    #     #    bl_utils.flatten_mesh(self.terrain, [f])
-    #     print("flattened %d faces" % len(flatten_faces))
-    #     self.time_it.stop()
-    #     print("[t] do_the_raycast(): ", self.time_it)
 
     def plane_to_terrain_point(self, point):
         "translate a point in the plane to a point in the terrain (coords)"
@@ -115,29 +85,7 @@ class BL_JOINER:
         for edge in self.bm.edges: edge.select = False
 
 
-    # def delete_faces_from_plane(self):
 
-    #     "this deletes the faces and the edges for a plane, and leaves only the verts, ready to work with raycast"
-    #     DEBUG = False
-    #     self.time_it = bl_utils.TimeIt()
-
-    #     bm = bmesh.new()
-    #     bm.from_mesh(self.obj_s.data)
-    #     bm.verts.ensure_lookup_table()
-    #     bm.edges.ensure_lookup_table()
-    #     bm.faces.ensure_lookup_table()
-
-    #     bmesh.ops.delete(bm, geom=list(bm.verts) + list(bm.edges) + list(bm.faces), context='EDGES_FACES')
-
-    #     bpy.context.view_layer.update()
-    #     bm.calc_loop_triangles()
-    #     bm.to_mesh(self.obj_s.data)
-    #     self.obj_s.data.update()
-    #     bm.free()
-
-    #     self.time_it.stop()
-    #     print("[t] add_geometry(): ", self.time_it)
-    #     return(("INFO", "Done"))
 
     def match_plane_vertex(self, plane):
 

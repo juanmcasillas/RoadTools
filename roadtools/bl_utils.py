@@ -147,11 +147,64 @@ class RoadMesh:
         return(self.myobject)
 
 
+def copy_obj(obj, linkit=True, hideit=False, hideorig=True):
+    """creates a full copy of the object
+    
+    Arguments:
+        obj {object} -- blender object
+    
+    Keyword Arguments:
+        linkit {bool} -- link the object in the tree (default: {True})
+        hideit {bool} -- hide the copy (default: {False})
+        hideorig {bool} -- hide the original (default: {True})
+    
+    Returns:
+        object -- the copied object
+    """
+
+    copy_obj = obj.copy()
+    copy_obj.data = obj.data.copy()
+
+    if linkit:
+        bpy.context.collection.objects.link(copy_obj)
+    if hideit:
+        copy_obj.hide_set(True)
+    if hideorig:
+        obj.hide_set(True)
+    
+    return copy_obj 
+
+
+def delete_faces_from_object(objname):
+    """this deletes the faces and the edges for a object, and leaves only the verts, ready to work with raycast
+
+    Arguments:
+        objname {string} -- blender's object name
+    """
+
+    obj_s = bpy.data.objects[objname]
+
+    bm = bmesh.new()
+    bm.from_mesh(obj_s.data)
+    bm.verts.ensure_lookup_table()
+    bm.edges.ensure_lookup_table()
+    bm.faces.ensure_lookup_table()
+
+    bmesh.ops.delete(bm, geom=list(bm.verts) + list(bm.edges) + list(bm.faces), context='EDGES_FACES')
+
+    bpy.context.view_layer.update()
+    bm.calc_loop_triangles()
+    bm.to_mesh(obj_s.data)
+    obj_s.data.update()
+    bm.free()
+
+    return obj_s
+
+
 
 def rotate_mesh_face ( objname, face_index, target_vector, point=None):
     
     obj_t = bpy.data.objects[objname]
-    mesh_t = bpy.data.meshes[objname] 
 
     # if int, run once, else run on the list (to speed up)
     work_faces = []
@@ -210,15 +263,15 @@ def rotate_mesh_face ( objname, face_index, target_vector, point=None):
                 print("moving: %3.2f" % distance)
                 bmesh.ops.translate(bm, verts=verts_selected, vec = distance * bface.normal)
 
-        print(bface.index)
-        print("source ", bface.normal)
-        print("target ", target_vector)
+        #print(bface.index)
+        #print("source ", bface.normal)
+        #print("target ", target_vector)
 
         mat_rot = bface.normal.rotation_difference(target_vector).to_euler().to_matrix().to_4x4()
-        print("quat ", mat_rot)
+        #print("quat ", mat_rot)
 
         bmesh.ops.rotate( bm, cent=bface.calc_center_median(), matrix=mat_rot, verts=verts_selected)
-        print("normal rotated ", bface.normal)
+        #print("normal rotated ", bface.normal)
         
         # some debug
         #verts_selected = [v for v in bface.verts]
@@ -232,7 +285,7 @@ def rotate_mesh_face ( objname, face_index, target_vector, point=None):
 
 
 
-def flatten_mesh(mesh_name, faces):
+def flatten_mesh(mesh_name, faces, influence=100):
     """flatten some faces using the normal, with looptools
     
     Arguments:
@@ -252,7 +305,7 @@ def flatten_mesh(mesh_name, faces):
     for f in faces:
         bm.faces[f].select = True
 
-    bpy.ops.mesh.looptools_flatten(influence=100, plane='normal')  #best_fit
+    bpy.ops.mesh.looptools_flatten(influence=influence, plane='normal')  #best_fit
     bmesh.update_edit_mesh(mesh, True)
 
 
