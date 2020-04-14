@@ -142,7 +142,7 @@ class BL_JOINER:
         self.time_it = bl_utils.TimeIt()
 
 
-        bl_road_utils.cut_road(self.obj_s.name, 'Terrain')
+        bl_road_utils.cut_road(self.obj_s.name, self.obj_t.name)
 
         # delete things but get name
         # remove the "original object (converted to vertices)"
