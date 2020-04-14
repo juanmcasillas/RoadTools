@@ -46,8 +46,6 @@ class ROADTOOLS_OT_JoinRoad(Operator):
 
         # do some tests here to match errors, or so
         tool = bl_join_road.BL_JOINER(roadtools.road_plane.name, roadtools.terrain_mesh.name)
-        tool.delete_faces_from_plane()
-        tool.do_the_raycast()
         tool.do_the_cut()
 
         ret = True

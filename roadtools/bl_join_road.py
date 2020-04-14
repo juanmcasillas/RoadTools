@@ -48,18 +48,12 @@ class BL_JOINER:
 
         self.obj_s.select_set(False)
 
-
         # copy the plane for later use. Copy OBJECT and MESH data.
         self.obj_copy = self.obj_s.copy()
         self.obj_copy.data = self.obj_s.data.copy()
         bpy.context.collection.objects.link(self.obj_copy)
         self.obj_copy.hide_set(True)
 
-        #  do another copy, due the CUT deletes all the elements
-        self.obj_copy_cut = self.obj_s.copy()
-        self.obj_copy_cut.data = self.obj_s.data.copy()
-        bpy.context.collection.objects.link(self.obj_copy_cut)
-        self.obj_copy_cut.hide_set(True)
 
 
         # stop it
@@ -67,20 +61,34 @@ class BL_JOINER:
         print("[t] __init__(): ", self.time_it)
 
 
-    def do_the_raycast(self):
+    # def do_the_raycast(self):
+    # removed it't not needed, but I'm going to use them right now.
+    # :D
+    #     self.time_it = bl_utils.TimeIt()
+    #     r = bl_utils.plane_to_vertex(self.plane, calc_centers=True)
 
-        self.time_it = bl_utils.TimeIt()
-        r = bl_utils.plane_to_vertex(self.plane, calc_centers=True)
+    #     self.plane_points = r['points']
+    #     self.plane_edges = r['edges']
 
-        self.plane_points = r['points']
-        self.plane_edges = r['edges']
+    #     self.raycast_points =  bl_utils.get_raycast(self.plane, self.terrain,
+    #                                 vertices = self.plane_points,
+    #                                 DEBUG=self.DEBUG, LIMIT=self.LIMIT)
 
-        self.raycast_points =  bl_utils.get_raycast(self.plane, self.terrain,
-                                    vertices = self.plane_points,
-                                    DEBUG=self.DEBUG, LIMIT=self.LIMIT)
+    #     # select the faces below the plane, and flatten them
 
-        self.time_it.stop()
-        print("[t] do_the_raycast(): ", self.time_it)
+    #     flatten_faces = []
+    #     for point in self.raycast_points:
+    #         terrain_down, index, point, location = point
+    #         flatten_faces.append(index)
+
+    #     #remove dupes
+    #     flatten_faces = list(set(flatten_faces))
+    #     bl_utils.rotate_mesh_face(self.terrain, flatten_faces, (0,0,1.0) )
+    #     #for f in flatten_faces:
+    #     #    bl_utils.flatten_mesh(self.terrain, [f])
+    #     print("flattened %d faces" % len(flatten_faces))
+    #     self.time_it.stop()
+    #     print("[t] do_the_raycast(): ", self.time_it)
 
     def plane_to_terrain_point(self, point):
         "translate a point in the plane to a point in the terrain (coords)"
@@ -107,31 +115,31 @@ class BL_JOINER:
         for edge in self.bm.edges: edge.select = False
 
 
-    def delete_faces_from_plane(self):
+    # def delete_faces_from_plane(self):
 
-        "this deletes the faces and the edges for a plane, and leaves only the verts, ready to work with raycast"
-        DEBUG = False
-        self.time_it = bl_utils.TimeIt()
+    #     "this deletes the faces and the edges for a plane, and leaves only the verts, ready to work with raycast"
+    #     DEBUG = False
+    #     self.time_it = bl_utils.TimeIt()
 
-        bm = bmesh.new()
-        bm.from_mesh(self.obj_s.data)
-        bm.verts.ensure_lookup_table()
-        bm.edges.ensure_lookup_table()
-        bm.faces.ensure_lookup_table()
+    #     bm = bmesh.new()
+    #     bm.from_mesh(self.obj_s.data)
+    #     bm.verts.ensure_lookup_table()
+    #     bm.edges.ensure_lookup_table()
+    #     bm.faces.ensure_lookup_table()
 
-        bmesh.ops.delete(bm, geom=list(bm.verts) + list(bm.edges) + list(bm.faces), context='EDGES_FACES')
+    #     bmesh.ops.delete(bm, geom=list(bm.verts) + list(bm.edges) + list(bm.faces), context='EDGES_FACES')
 
-        bpy.context.view_layer.update()
-        bm.calc_loop_triangles()
-        bm.to_mesh(self.obj_s.data)
-        self.obj_s.data.update()
-        bm.free()
+    #     bpy.context.view_layer.update()
+    #     bm.calc_loop_triangles()
+    #     bm.to_mesh(self.obj_s.data)
+    #     self.obj_s.data.update()
+    #     bm.free()
 
-        self.time_it.stop()
-        print("[t] add_geometry(): ", self.time_it)
-        return(("INFO", "Done"))
+    #     self.time_it.stop()
+    #     print("[t] add_geometry(): ", self.time_it)
+    #     return(("INFO", "Done"))
 
-    def match_raycast_vertex(self, plane):
+    def match_plane_vertex(self, plane):
 
         self.time_it = bl_utils.TimeIt()
 
@@ -182,11 +190,11 @@ class BL_JOINER:
         """do the knife project, but first copy the object, hide it and restore
         it after in order to get the road working again.
         """
-        self.time_it = bl_utils.TimeIt()
-        self.obj_copy.hide_set(False)
 
-        bl_road_utils.cut_road(self.obj_copy.name, 'Terrain')
-        self.match_raycast_vertex(self.plane)
+        self.time_it = bl_utils.TimeIt()
+
+
+        bl_road_utils.cut_road(self.obj_s.name, 'Terrain')
 
         # delete things but get name
         # remove the "original object (converted to vertices)"
@@ -194,13 +202,15 @@ class BL_JOINER:
         obj_name = self.obj_s.name
         obj_mesh_name = self.obj_s.data.name
 
-        ##bpy.context.collection.objects.unlink(self.obj_copy)
         bpy.data.objects.remove(self.obj_s)
-        bpy.data.objects.remove(self.obj_copy)
 
-        self.obj_copy_cut.name = obj_name
-        self.obj_copy_cut.data.name = obj_mesh_name
-        self.obj_copy_cut.hide_set(False)
+        self.obj_copy.name = obj_name
+        self.obj_copy.data.name = obj_mesh_name
+        self.obj_copy.hide_set(False)
+
+        # after restoring the plane, do the vertex match.
+        self.match_plane_vertex(self.plane)
+
 
         self.time_it.stop()
         print("[t] do_the_cut(): ", self.time_it)
@@ -210,8 +220,8 @@ if False:
     ## apply the curve in the ROAD before doing anything else!
 
     tool = BL_JOINER('Road_HiRes','Terrain')
-    tool.delete_faces_from_plane()
-    tool.do_the_raycast()
     tool.do_the_cut()
+
+
 
 

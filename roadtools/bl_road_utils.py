@@ -36,16 +36,15 @@ def cut_road(plane, terrain, height=9000):
     bpy.ops.object.select_all(action='DESELECT')
 
     obj_s = bpy.data.objects[plane]
-    obj_t = bpy.data.objects[terrain]
 
     # move upwards too high so we can
     # 1) ray cast
     # 2) do a full projection
 
-    obj_s.location = obj_s.location + Vector((0,0,height))
+    obj_s.location = obj_s.location + Vector((0, 0, height))
     #bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
-    BL_DEBUG.set_mark(Vector((0,0,0)))
+    BL_DEBUG.set_mark(Vector((0, 0, 0)))
 
 
 
@@ -69,7 +68,7 @@ def cut_road(plane, terrain, height=9000):
     bpy.data.objects[plane].select_set(False)
     bpy.ops.mesh.delete(type='FACE')
 
-    obj_s.location = obj_s.location - Vector((0,0,height))
+    obj_s.location = obj_s.location - Vector((0, 0, height))
     bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
     #bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
