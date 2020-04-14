@@ -18,7 +18,7 @@ import bl_utils
 import bl_road_utils
 
 
-class BL_PROJECTOR:
+class BL_JOINER:
     def __init__(self, plane, terrain, DEBUG=False, LIMIT=None, delay_raycast=True):
 
         self.time_it = bl_utils.TimeIt()
@@ -38,13 +38,13 @@ class BL_PROJECTOR:
         # if the plane has any modifiers without apply, apply them
         bpy.ops.object.select_all(action='DESELECT')
         bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
-        
+
         self.obj_s.select_set(True)
         bpy.context.view_layer.objects.active = self.obj_s
 
         for modifier in self.obj_s.modifiers:
             bpy.ops.object.modifier_apply(modifier=modifier.name)
-            print("Applying modifier %s on %s" % (modifier.name, self.obj_s.name))
+            #print("Applying modifier %s on %s" % (modifier.name, self.obj_s.name))
 
         self.obj_s.select_set(False)
 
@@ -197,7 +197,7 @@ class BL_PROJECTOR:
         ##bpy.context.collection.objects.unlink(self.obj_copy)
         bpy.data.objects.remove(self.obj_s)
         bpy.data.objects.remove(self.obj_copy)
-        
+
         self.obj_copy_cut.name = obj_name
         self.obj_copy_cut.data.name = obj_mesh_name
         self.obj_copy_cut.hide_set(False)
@@ -209,7 +209,7 @@ class BL_PROJECTOR:
 if False:
     ## apply the curve in the ROAD before doing anything else!
 
-    tool = BL_PROJECTOR('Road_HiRes','Terrain')
+    tool = BL_JOINER('Road_HiRes','Terrain')
     tool.delete_faces_from_plane()
     tool.do_the_raycast()
     tool.do_the_cut()

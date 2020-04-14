@@ -57,7 +57,9 @@ class ROADTOOLS_OT_Load_Gpx(Operator):
         level = 'INFO'
         gpx = BL_IMPORT_GPX()
         try:
-            ret, msg, obj, length = gpx.import_gpx(roadtools.gpx_file)
+            ret, msg, obj, length = gpx.import_gpx(roadtools.gpx_file,
+                                height_offset=roadtools.gpx_altitude_offset,
+                                optimize=roadtools.gpx_optimize)
             #a.bounding_box.expand(1000,500,500,1000)
             #print(a.bounding_box)
             scene.roadtools.maxLat =  gpx.bounding_box.top

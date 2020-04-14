@@ -41,28 +41,28 @@ class BL_IMPORT_GPX():
                 self.left = left
                 self.right = right
                 self.bottom = bottom
-        
+
         # to expand the bounding box, if needed. # can be called later, if you need to.
         self.expand = expand_class(expand_top, expand_left, expand_right, expand_bottom)
         self.ignoreGeoreferencing = ignoreGeoreferencing
         self.useElevation = useElevation
-        self.importType = importType        
+        self.importType = importType
         self.projection = DefaultProjection(self.ignoreGeoreferencing)
-        
+
         self.bounding_box = None
         self.points = None
 
-    def import_gpx(self, filepath, name="gpx_curve"):
-        """import a gpx file smoothing it and leveling the altitudes 
+    def import_gpx(self, filepath, name="gpx_curve", height_offset=0.0, optimize=True):
+        """import a gpx file smoothing it and leveling the altitudes
         also adjusts the origin of the object to the first point
-        
+
         Arguments:
             filepath {string} -- full path to the gpx file
-        
+
         Keyword Arguments:
             name {string} -- the object name in blender (default: {None})
         """
-        
+
         self.filepath = filepath
 
         # setting active object if there is no active object
@@ -75,33 +75,33 @@ class BL_IMPORT_GPX():
                 if not bpy.ontext.scene.objects.active:
                     bpy.context.scene.objects.active = bpy.context.scene.objects[0]
             bpy.ops.object.mode_set(mode="OBJECT")
-        
+
         bpy.ops.object.select_all(action="DESELECT")
-        
+
         name = name or os.path.basename(self.filepath)
-        
+
         if self.importType == "curve":
-            obj, length = self.makeCurve(bpy.context, name)
+            obj, length = self.makeCurve(bpy.context, name, height_offset, optimize)
         else:
-            obj, length = self.makeMesh(bpy.context, name)
-        
+            obj, length = self.makeMesh(bpy.context, name, height_offset, optimize)
+
         if _isBlender280:
             bpy.context.scene.collection.objects.link(obj)
         else:
             bpy.context.scene.objects.link(obj)
-        
+
         # remove double vertices
         if _isBlender280:
             bpy.context.view_layer.objects.active = obj
         else:
             bpy.context.scene.objects.active = obj
-        
+
         if _isBlender280:
             obj.select_set(True)
         else:
             obj.select = True
             bpy.context.scene.update()
-        
+
         # put the origin of the object in the first point
         # new_origin = obj.data.splines.active.points[0].co.xyz
         # obj.data.transform(mathutils.Matrix.Translation(-new_origin))
@@ -111,38 +111,42 @@ class BL_IMPORT_GPX():
         # obj.data.transform(obj.matrix_world)
         # obj.matrix_world = mathutils.Matrix()
 
-        
+
 
         return(("INFO", "Done", obj, length))
 
 
-    def read_gpx_file(self, context):
-        
-        points, bb, length = core.smooth.smooth_gpx(self.filepath, optimize=True, ground=False, output=None)
-        
+    def read_gpx_file(self, context, height_offset=0.0, optimize=True):
+
+        points, bb, length = core.smooth.smooth_gpx(self.filepath,
+                            optimize=optimize,
+                            ground=False,
+                            output=None,
+                            height_offset=height_offset)
+
         self.points = points
         self.bounding_box = bb
 
         bb.expand(self.expand.top,self.expand.left,self.expand.right,self.expand.bottom)
 
         segment = [ (p.latitude, p.longitude, p.elevation) for p in points ]
-        
+
         #bb.expand(1000,500,500,1000)
         minLat = bb.bounds.min_latitude
         maxLat = bb.bounds.max_latitude
         minLon = bb.bounds.min_longitude
         maxLon = bb.bounds.max_longitude
 
-        #projection = self.getProjection(context, 
+        #projection = self.getProjection(context,
         projection = self.projection.getProjection(context,lat = (minLat + maxLat)/2, lon = (minLon + maxLon)/2)
 
         return [segment], projection, length
-    
-    def makeMesh(self, context, name):
+
+    def makeMesh(self, context, name, height_offset, optimize):
         self.bm = bmesh.new()
 
-        segments, projection, length = self.read_gpx_file(context)
-        
+        segments, projection, length = self.read_gpx_file(context, height_offset=height_offset, optimize=optimize)
+
         # create vertices and edges for the track segments
         for segment in segments:
             prevVertex = None
@@ -152,7 +156,7 @@ class BL_IMPORT_GPX():
                 if prevVertex:
                     self.bm.edges.new([prevVertex, v])
                 prevVertex = v
-        
+
         # finalize
         mesh = bpy.data.meshes.new(name)
         self.bm.to_mesh(mesh)
@@ -160,17 +164,18 @@ class BL_IMPORT_GPX():
         # cleanup
         self.bm.free()
         self.bm = None
-        
+
         return (bpy.data.objects.new(name, mesh), length)
-    
-    def makeCurve(self, context, name):
+
+    def makeCurve(self, context, name, height_offset, optimize):
         curve = bpy.data.curves.new(name, 'CURVE')
         curve.dimensions = '3D'
         curve.twist_mode = 'Z_UP'
+        curve.resolution_u = 24
         self.curve = curve
-        
-        segments, projection, length = self.read_gpx_file(context)
-        
+
+        segments, projection, length = self.read_gpx_file(context, height_offset=height_offset, optimize=optimize)
+
         for segment in segments:
             self.createSpline()
             for i, point in enumerate(segment):

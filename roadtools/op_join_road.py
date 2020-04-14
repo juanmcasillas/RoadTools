@@ -2,16 +2,14 @@
 # -*- coding: utf-8 -*-
 # ############################################################################
 #
-# op_create_road.py
-# 04/13/2020 (c) Juan M. Casillas <juanm.casillas@gmail.com>
+# op_join_road.py
+# 04/14/2020 (c) Juan M. Casillas <juanm.casillas@gmail.com>
 #
-# create a road in high or low res
-# High res means using the point-by-point template, low res
-# uses an array modifier and curve one to create a low poly road
-# 
+# join the road with the terrain, using the Knife Project and some tools
+#
 # ############################################################################
+
 import bpy
-import math
 
 from bpy.props import (StringProperty,
                        BoolProperty,
@@ -28,11 +26,12 @@ from bpy.types import (Panel,
                        )
 
 import bl_road_utils
+import bl_join_road
 
-class ROADTOOLS_OT_CreateRoad(Operator):
-    bl_idname = 'roadtools.create_road'
-    bl_description = "create a road in high or low res"
-    bl_label = 'Create Road'
+class ROADTOOLS_OT_JoinRoad(Operator):
+    bl_idname = 'roadtools.join_road'
+    bl_description = "Join the road plane with the terrain, moving the terrain next to the road"
+    bl_label = 'Join Road to Terrain'
 
     def execute(self, context):
         scene = context.scene
@@ -41,25 +40,21 @@ class ROADTOOLS_OT_CreateRoad(Operator):
         #
         # get the types, check they are fine
         #
-        if not roadtools.road_curve:
-            self.report({'ERROR'}, 'Invalid Input Data. Road should be a CURVE')
+        if not roadtools.terrain_mesh or not roadtools.road_plane:
+            self.report({'ERROR'}, 'Invalid Input Data. Terrain should be a MESH, Road should be a MESH')
             return {"FINISHED"}
 
-        ret, msg, obj = bl_road_utils.create_road(
-                roadtools.road_curve.name, 
-                roadtools.road_width, 
-                roadtools.road_height,
-                roadtools.gpx_length, 
-                hires=roadtools.road_hires
-            )
-        # set our object
-        roadtools.road_plane = obj
+        # do some tests here to match errors, or so
+        tool = bl_join_road.BL_JOINER(roadtools.road_plane.name, roadtools.terrain_mesh.name)
+        tool.delete_faces_from_plane()
+        tool.do_the_raycast()
+        tool.do_the_cut()
 
-
-        # to the thing here
+        ret = True
+        msg = "Done"
         level = 'INFO'
         if not ret: level = 'ERROR'
-        self.report({level}, 'RoadTools: Create Road: %s' % msg)
+        self.report({level}, 'RoadTools: Join Road: %s' % msg)
         return {"FINISHED"}
 
 # ------------------------------------------------------------------------
@@ -67,7 +62,7 @@ class ROADTOOLS_OT_CreateRoad(Operator):
 # ------------------------------------------------------------------------
 
 classes = (
-    ROADTOOLS_OT_CreateRoad,
+    ROADTOOLS_OT_JoinRoad,
 )
 
 def register():
@@ -80,4 +75,3 @@ def unregister():
     for cls in reversed(classes):
         unregister_class(cls)
 
-   

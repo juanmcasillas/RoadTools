@@ -30,6 +30,7 @@ modulesNames = [ 'properties',
                 'op_fake_terrain',
                 'op_match_terrain',
                 'op_create_road',
+                'op_join_road',
                 'op_flatten_terrain', 
                 'ui']
 

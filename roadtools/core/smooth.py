@@ -4,9 +4,9 @@
 #
 # smooth.py
 # 04/13/2020 (c) Juan M. Casillas <juanm.casillas@gmail.com>
-# 
+#
 # Read a GPX file, smooth it, ready to build a road in blender, or whatever
-# 
+#
 # ############################################################################
 
 import os
@@ -61,7 +61,7 @@ class ProjectionMapper:
         return z, l, x, y
 
     def project_2(self, lon, lat):
-        
+
         myProj = pyproj.Proj("+proj=utm +zone=30T, +north +ellps=WGS84 +datum=WGS84 +units=m +no_defs")
         UTMx, UTMy = myProj(lon, lat)
         #print(lat, lon, UTMx, UTMy)
@@ -108,7 +108,7 @@ class GPXLoader:
         for track in gpx_data.tracks:
             for segment in track.segments:
                 points += segment.points
-        
+
         gpx_data.tracks[0].segments[0].points = points
         self.length_3d = gpx_data.tracks[0].length_3d()
 
@@ -118,11 +118,11 @@ class GPXLoader:
         #    opt_points = gpx_optimizer.Optimize(points)
         #    gpx_optimizer.Print_stats()
         #    points = opt_points
-        
+
         elevs = []
         ret_points = []
-      
-      
+
+
         # don't reproject to UTM
 
         if self.reproject:
@@ -133,15 +133,15 @@ class GPXLoader:
                 ret_points += [x, y, point.time, point.elevation]
                 self.optimize and elevs.append(point.elevation)
         else:
-            for point in points:            
+            for point in points:
                 if not point.time:
                     #timezone = pytz.timezone("Zulu")
                     point.time = datetime.datetime.now()
                     #point.time = timezone.localize(point.time)
                 ret_points += [point.latitude, point.longitude, point.time , point.elevation]
                 self.optimize and elevs.append(point.elevation)
-        
-        if self.optimize:             
+
+        if self.optimize:
             #smoothed_elevations = savitzky_golay( np.array(elevs) , 11, 5)
             print("doing savitzky_golay")
             #smoothed_elevations = savitzky_golay( np.array(elevs) , 51, 9)
@@ -152,8 +152,8 @@ class GPXLoader:
 
             print("Smoothed %d points" % len(ret_points))
             ##draw_elev(elevs,smoothed_elevations)
-        
-        
+
+
         return(ret_points)
 
 
@@ -172,7 +172,7 @@ def draw(points, reshape=False):
     x = d[:,[0]]
     y = d[:,[1]]
     plt.plot(x,y, linestyle="",marker="o")
-    plt.show()    
+    plt.show()
 
 def draw_elev(elevs,smooth):
     import matplotlib.pyplot as plt
@@ -183,7 +183,7 @@ def draw_elev(elevs,smooth):
     plt.plot(idx,elevs, color="grey")
     plt.plot(idx,smooth, color="lime")
 
-    #some interpolation methods, but savitzky_golay with high window size, and 
+    #some interpolation methods, but savitzky_golay with high window size, and
     #high poly order does the trick fast
 
     #xnew = np.linspace(idx.min(), idx.max(), 300)
@@ -199,10 +199,10 @@ def draw_elev(elevs,smooth):
 
 
 
-def smooth_gpx( gpx_file, optimize=True, ground=False, output="output.gpx",title="output"):
+def smooth_gpx( gpx_file, optimize=True, ground=False, output="output.gpx",title="output", height_offset=0.0):
     "if output is none, no file is created :D"
 
-    gpx_loader = GPXLoader(optimize=optimize)
+    gpx_loader = GPXLoader(optimize=True) # allways smooth elevations
     points = gpx_loader.load(gpx_file)
 
     bb = GPX_BB(gpx_loader.bounds)
@@ -218,16 +218,22 @@ def smooth_gpx( gpx_file, optimize=True, ground=False, output="output.gpx",title
     pd = []
     min_elev = sys.maxsize
     for p in points:
+
+        # apply the height_offset in the elevation for all the points, if found
+        p[3] = p[3] + height_offset
+
         pn = gpxpy.gpx.GPXTrackPoint(latitude=p[0],longitude=p[1],time=p[2],elevation=p[3])
         if pn.elevation < min_elev:
             min_elev = pn.elevation
+
         pd.append(pn)
 
-    print("running point optimizer")
-    gpx_optimizer = GPXOptimizer()
-    opt_points = gpx_optimizer.Optimize(pd)
-    gpx_optimizer.Print_stats()
-    pd = opt_points
+    if optimize:
+        print("running point optimizer")
+        gpx_optimizer = GPXOptimizer()
+        opt_points = gpx_optimizer.Optimize(pd)
+        gpx_optimizer.Print_stats()
+        pd = opt_points
 
     if len(pd) == 0:
         print("Can't get any points. bailing out")
@@ -245,7 +251,7 @@ def smooth_gpx( gpx_file, optimize=True, ground=False, output="output.gpx",title
         fd = open(output,"w+")
         fd.write(data)
         fd.close()
-    
+
     print("length:", gpx_loader.length_3d)
     return (pd, GPX_BB(gpx_loader.bounds), gpx_loader.length_3d )
 
