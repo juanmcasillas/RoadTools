@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Get Lat-Lon Bounds</title>
+    <meta name="viewport" content="initial-scale=1.0">
+    <meta charset="utf-8">
+    <style>
+      /* Always set the map height explicitly to define the size of the div
+       * element that contains the map. */
+      #map {
+        height: 100%;
+      }
+      /* Optional: Makes the sample page fill the window. */
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <script>
+      var rectangle;
+      var map;
+      var infoWindow;      
+
+      function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+            center: {lat: 40.33, lng: -4.20},
+            zoom: 12
+            });
+
+            var bounds = {
+                north: 40.34,
+                south: 40.32,
+                east: -4.18,
+                west: -4.22,
+            };
+
+            // Define a rectangle and set its editable property to true.
+            rectangle = new google.maps.Rectangle({
+                bounds: bounds,
+                editable: true,
+                draggable: true,
+                });
+
+        
+        rectangle.setMap(map);
+        rectangle.addListener('bounds_changed', showNewRect);
+        infoWindow = new google.maps.InfoWindow();
+    
+        }
+        // Show the new coordinates for the rectangle in an info window.
+
+        /** @this {google.maps.Rectangle} */
+        function showNewRect(event) {
+            var ne = rectangle.getBounds().getNorthEast();
+            var sw = rectangle.getBounds().getSouthWest();
+
+            var contentString = '<b>Rectangle Selected</b><br>' +
+                'Top (N): '    + ne.lat() + '<br>' +
+                'Left (W): '   + sw.lng() + '<br>' +
+                'Right (E): '  + ne.lng() + '<br>' +
+                'Bottom (S): ' + sw.lat() + '<br>';
+
+            // Set the info window's content and position.
+            infoWindow.setContent(contentString);
+            infoWindow.setPosition(ne);
+
+            infoWindow.open(map);
+        }
+
+
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCmt3hDLA1J2QF9K9vB_1ksDT82fuS7LHk&callback=initMap"
+    async defer></script>
+  </body>
+</html>
