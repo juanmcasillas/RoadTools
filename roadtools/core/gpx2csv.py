@@ -20,7 +20,7 @@ import numpy as np
 from smooth import  smooth_gpx
 from geoid import GeoidHeight
 from raster import RasterManager
-
+from mtn import MTN
 
 
 if __name__ == "__main__":
@@ -39,9 +39,16 @@ if __name__ == "__main__":
 
     pd = []
     i = 1
+    mtn = [] 
     for p in points:
         N = geoid.get(p.latitude, p.longitude)
         pd.append((p.longitude,p.latitude,p.elevation, p.elevation-N, N, i))
+
+        r = MTN.where(p.longitude,p.latitude)
+        
+        if r['MTN50'][0][1] not in mtn:
+            mtn.append(r['MTN50'][0][1])
+
         i+=1
     pd = rasman.bulk_reproj(pd)
 
@@ -51,6 +58,8 @@ if __name__ == "__main__":
   
     #    writer = csv.writer(f)
 
+    print("MTN Sheets: ", list(mtn))
+
     header = [ 'lon', 'lat', 'x', 'y', 'elev_ellip', 'elev_orto', 'N', 'index' ]
 
     with open(args.csv_out, 'w', newline='') as f:
@@ -58,6 +67,3 @@ if __name__ == "__main__":
         writer.writerow(i for i in header)
         writer.writerows(pd)
 
-    # R
-
-    #
