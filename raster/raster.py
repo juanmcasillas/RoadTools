@@ -6,7 +6,7 @@
 # 04/17/2020 (c) Juan M. Casillas <juanm.casillas@gmail.com>
 #
 # Process some raster files (ARC, ECW) and extract a bounding box,
-# so we can manage the result files in blender, for example. 
+# so we can manage the result files in blender, for example.
 #
 # http://centrodedescargas.cnig.es/CentroDescargas/index.jsp
 # MDT02 is ETRS89 UTM (zone in the name of the file HU30 -> zone 30)
@@ -19,7 +19,7 @@
 #    print(raster.crs)
 #
 # this is done to reproject
-# this creates a prj file (called) with the info. if you do the file, you don't 
+# this creates a prj file (called) with the info. if you do the file, you don't
 # need to reproject the data, I think
 #
 # https://epsg.io/25830 ETRS89 / UTM zone 30N
@@ -38,12 +38,14 @@ from rasterio.warp import calculate_default_transform, reproject, Resampling
 from rasterio.windows import Window, from_bounds
 from rasterio.transform import Affine
 import pyproj
+import numpy
+from pyproj import Transformer, transform
 
 def reproject_raster(in_path, out_path,crs):
     """reproject a raster image. Call this method if you don't have the .prj file
     for the asc file. But all the IGN files are in the same Proj (UTM H30) so the
     same file is valid
-    
+
     Arguments:
         in_path {string} -- input file
         out_path {string} -- output file
@@ -88,33 +90,68 @@ class RasterManager:
         self.outputs['asc'] = self.save_to_asc
         self.outputs['geotiff'] = self.save_to_geotiff
         self.PROJCS="""PROJCS["ETRS_1989_UTM_Zone_30N",GEOGCS["GCS_ETRS_1989",DATUM["D_ETRS_1989",SPHEROID["GRS_1980",6378137.0,298.257222101]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]],PROJECTION["Transverse_Mercator"],PARAMETER["False_Easting",500000.0],PARAMETER["False_Northing",0.0],PARAMETER["Central_Meridian",-3.0],PARAMETER["Scale_Factor",0.9996],PARAMETER["Latitude_Of_Origin",0.0],UNIT["Meter",1.0]]"""
-    
+        
+        self.dest_wgs84 =  pyproj.Proj('EPSG:4326') # WGS84/Geographic
+        self.target_utm30N =  pyproj.Proj(self.PROJCS) # WGS84 UTM Zone 30N EPSG:25830
+     
+
     def wgs84_to_utm(self, lon,lat):
         """convert from lat, lon in WGS84 (GPS) 'EPSG:4326' UTM zone 30N 'EPSG:25830'
-        
+
         Arguments:
             lon {float} -- longitude
             lat {float} -- latitude
         """
 
-        dest =  pyproj.Proj('EPSG:4326') # WGS84/Geographic
-        target =  pyproj.Proj(self.PROJCS) # WGS84 UTM Zone 30N
+ 
         
         point = (lat, lon)
-        point_r = pyproj.transform(dest, target, *point)
+        point_r = pyproj.transform(self.dest_wgs84, self.target_utm30N, *point)
+        #x,y
         return(point_r[0], point_r[1])
+
+
+    def bulk_reproj(self,points):
+        """do a bulk reprojection over an array of tuples [(lon, lat),(lon,lat)]
+           one call to proj is slow, but
+           https://github.com/pyproj4/pyproj/issues/484
+           https://pyproj4.github.io/pyproj/stable/advanced_examples.html#optimize-transformations
+           does the trick for speed up the projection
+
+        Arguments:
+            points {list} -- array of tuples [(lon, lat),(lon,lat)]
+
+        """
+
+        transformer = Transformer.from_proj(proj_from=self.dest_wgs84, proj_to=self.target_utm30N)
+        np_points = numpy.array(points)
+
+        # convert the array of points, into np arrays
+        lon_coords = np_points[:,0]
+        lat_coords = np_points[:,1]
+
+        # call first lat, then lon 
+        # I don't know how this hell can works properly XD
+        r = transformer.transform(lat_coords, lon_coords)
+
+
+        np_points =numpy.insert(np_points, 2, values=r[0],axis=1)
+        np_points =numpy.insert(np_points, 3, values=r[1],axis=1)
+
+        return(np_points)
+
 
     def rect(self, fin, fout, bounds, mode='asc'):
         """crops a rectangle of Bounds, from a file. Returns a asc (grid) or geotiff
-        
+
         Arguments:
             fin {string} -- input file
             fout {string} -- output file path
             bounds {bound class} -- a class with top,left,bottom,right attrs
-        
+
         Keyword Arguments:
             mode {string} -- output file mode. can be 'asc' or 'geotiff' (default: {'asc'})
-        
+
         Returns:
             [bool] -- Nothing, for now. True
         """
@@ -124,14 +161,14 @@ class RasterManager:
             print(dataset.crs)
             print(dataset.bounds)
 
-            #big    
+            #big
             lon_a, lat_a = self.wgs84_to_utm(bounds.left, bounds.top) # lon, lat # TOPLEFT
             lon_b, lat_b = self.wgs84_to_utm(bounds.right, bounds.bottom) # lon, lat #BOTTOMRIGHT
 
             # this return in row, col (Y,X)
             py_a,px_a = dataset.index( lon_a, lat_a )
             py_b,px_b = dataset.index( lon_b, lat_b )
-            
+
             width = px_b - px_a
             height = py_b - py_a
 
@@ -145,7 +182,7 @@ class RasterManager:
             res_y = (lat_b - lat_a) / height
             # this is the point (A) scaled, so we can locate coords inside.
             # Affine.scale(res_x, res_x) should be Affine.scale(res_x, res_y) but this generates
-            # non square pixels, and insert dx,dy values, that are not supported by noone. 
+            # non square pixels, and insert dx,dy values, that are not supported by noone.
             # tested with GlobalMapper, and it works fine.
             transform = Affine.translation(lon_a + res_x, lat_a + res_y) * Affine.scale(res_x, res_x)
 
@@ -155,7 +192,7 @@ class RasterManager:
 
     def save_to_asc(self, fout, width, height, window, transform):
         """save to asc (grid) format. Internal
-        
+
         Arguments:
             fout {[type]} -- [description]
             width {[type]} -- [description]
@@ -163,12 +200,12 @@ class RasterManager:
             window {[type]} -- [description]
             transform {[type]} -- [description]
         """
-        with rasterio.open(fout,'w', 
-                driver='AAIgrid', 
-                height=height, 
-                width=width, 
-                count=1, 
-                dtype=window.dtype, 
+        with rasterio.open(fout,'w',
+                driver='AAIgrid',
+                height=height,
+                width=width,
+                count=1,
+                dtype=window.dtype,
                 ##crs='epsg:25830',
                 nodata=-99999.0,
                 transform=transform,
@@ -178,7 +215,7 @@ class RasterManager:
 
     def save_to_geotiff(self, fout, width, height, window, transform):
         """save to geotiff format. Internal
-        
+
         Arguments:
             fout {[type]} -- [description]
             width {[type]} -- [description]
@@ -186,11 +223,11 @@ class RasterManager:
             window {[type]} -- [description]
             transform {[type]} -- [description]
         """
-        with rasterio.open(fout,'w', 
-                driver='GTiff', 
-                height=height, 
-                width=width, 
-                count=window.shape[0], 
+        with rasterio.open(fout,'w',
+                driver='GTiff',
+                height=height,
+                width=width,
+                count=window.shape[0],
                 transform=transform,
                 # specific for format
                 blockxsize=256,
@@ -232,14 +269,14 @@ if __name__ == "__main__":
         f_out_asc="subset.asc"
         f_in_ecw="/Volumes/WINEXT/Cartography/PNOA/PNOA_MA_OF_ETRS89_HU30_h50_0578.ecw"
         f_out_ecw="subset.tif"
-    
+
     else:
 
         f_in_asc="K:\Cartography\MDT05\PNOA_MDT05_ETRS89_HU30_0578_LID.asc"
         f_out_asc="K:\Cartography\MDT05\subset.asc"
         f_in_ecw="K:\Cartography\PNOA\PNOA_MA_OF_ETRS89_HU30_h50_0578.ecw"
         f_out_ecw="K:\Cartography\PNOA\subset.tif"
-    
+
 
     rm.rect(f_in_asc, f_out_asc, bounds ,mode='asc')
     # geotiff test

@@ -260,7 +260,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-v", "--verbose", help="Show data about file and processing", action="count")
     parser.add_argument("-o", "--optimize", help="Optimize GPX input(filter)", action="store_true")
-    parser.add_argument("-d", "--distance", help="split the track in distance chunks", action="store", default=10.0)
     parser.add_argument("-g", "--ground", help="Set the mininum altitude as 0 reference", action="store_true")
     parser.add_argument("gpx_file", help="GPX file to load")
     args = parser.parse_args()
