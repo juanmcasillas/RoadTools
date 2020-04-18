@@ -91,10 +91,10 @@ class RasterManager:
         self.outputs['asc'] = self.save_to_asc
         self.outputs['geotiff'] = self.save_to_geotiff
         self.PROJCS="""PROJCS["ETRS_1989_UTM_Zone_30N",GEOGCS["GCS_ETRS_1989",DATUM["D_ETRS_1989",SPHEROID["GRS_1980",6378137.0,298.257222101]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]],PROJECTION["Transverse_Mercator"],PARAMETER["False_Easting",500000.0],PARAMETER["False_Northing",0.0],PARAMETER["Central_Meridian",-3.0],PARAMETER["Scale_Factor",0.9996],PARAMETER["Latitude_Of_Origin",0.0],UNIT["Meter",1.0]]"""
-        
+
         self.dest_wgs84 =  pyproj.Proj('EPSG:4326') # WGS84/Geographic
         self.target_utm30N =  pyproj.Proj(self.PROJCS) # WGS84 UTM Zone 30N EPSG:25830
-     
+
 
     def wgs84_to_utm(self, lon,lat):
         """convert from lat, lon in WGS84 (GPS) 'EPSG:4326' UTM zone 30N 'EPSG:25830'
@@ -104,8 +104,8 @@ class RasterManager:
             lat {float} -- latitude
         """
 
- 
-        
+
+
         point = (lat, lon)
         point_r = pyproj.transform(self.dest_wgs84, self.target_utm30N, *point)
         #x,y
@@ -131,7 +131,7 @@ class RasterManager:
         lon_coords = np_points[:,0]
         lat_coords = np_points[:,1]
 
-        # call first lat, then lon 
+        # call first lat, then lon
         # I don't know how this hell can works properly XD
         r = transformer.transform(lat_coords, lon_coords)
 
@@ -141,25 +141,28 @@ class RasterManager:
 
         return(np_points)
 
-    def add_prj(self, fout, overwrite=False):
+    def add_prj(self, fout, crs, overwrite=False):
         """creates the .prj file if not found
-        
+
         Arguments:
             fout {string} -- output file destination
-        
+
         Keyword Arguments:
             overwrite {bool} -- overwrite the file if exists (default: {False})
-        
+
         """
 
+        P = pyproj.Proj(crs)
+        wkt = P.crs.to_wkt(version=pyproj.enums.WktVersion.WKT1_ESRI)
+        
         fdir = os.path.dirname(os.path.abspath(fout))
-        base = os.path.basename(fout) 
+        base = os.path.basename(fout)
         fname, fext = os.path.splitext(base)
-        prj_path = fdir + "%s.%s" % (fname, "prj")
+        prj_path = fdir + os.sep + "%s.%s" % (fname, "prj")
         if not os.path.exists(prj_path) or overwrite:
-            with open(prj_path, 'w') as f:
-                f.write(self.PROJCS)
             print("created %s file" % prj_path)
+            with open(prj_path, 'w') as f:
+                f.write(wkt)
 
     def rect(self, fin, fout, bounds, mode='asc'):
         """crops a rectangle of Bounds, from a file. Returns a asc (grid) or geotiff
@@ -206,12 +209,12 @@ class RasterManager:
             # tested with GlobalMapper, and it works fine.
             transform = Affine.translation(lon_a + res_x, lat_a + res_y) * Affine.scale(res_x, res_x)
 
-            self.outputs[mode](fout, width, height, window,transform)
-            self.add_prj(fout)
-            
+            self.outputs[mode](fout, width, height, window, transform, dataset.crs)
+            self.add_prj(fout, dataset.crs)
+
         return True
 
-    def save_to_asc(self, fout, width, height, window, transform):
+    def save_to_asc(self, fout, width, height, window, transform, crs):
         """save to asc (grid) format. Internal
 
         Arguments:
@@ -227,7 +230,7 @@ class RasterManager:
                 width=width,
                 count=1,
                 dtype=window.dtype,
-                crs='epsg:25830',
+                crs=crs, # 'epsg:25830'
                 nodata=-99999.0,
                 transform=transform,
                 cellsize=1
@@ -235,7 +238,7 @@ class RasterManager:
             dst.write(window)
 
 
-    def save_to_geotiff(self, fout, width, height, window, transform):
+    def save_to_geotiff(self, fout, width, height, window, transform, crs):
         """save to geotiff format. Internal
 
         Arguments:
@@ -256,7 +259,7 @@ class RasterManager:
                 blockysize=256,
                 compress='lzw',
                 dtype=window.dtype,
-                crs='epsg:25830',
+                crs=crs, # 'epsg:25830'
                 interleave='band',
                 nodata=0,
                 tiled=True
