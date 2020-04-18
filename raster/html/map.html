@@ -4,6 +4,11 @@
     <title>Get Lat-Lon Bounds</title>
     <meta name="viewport" content="initial-scale=1.0">
     <meta charset="utf-8">
+
+    <link rel="stylesheet" href="jquery-ui.min.css">
+    <script src="jquery.min.js"></script>
+    <script src="jquery-ui.min.js"></script>
+
     <style>
       /* Always set the map height explicitly to define the size of the div
        * element that contains the map. */
@@ -21,9 +26,16 @@
   <body>
     <div id="map"></div>
     <script>
+       $( function() {
+        $( "#dialog" ).dialog({ 
+          width: 500,
+        });
+      } );
+
       var rectangle;
       var map;
       var infoWindow;      
+
 
       function initMap() {
             map = new google.maps.Map(document.getElementById('map'), {
@@ -73,7 +85,23 @@
 
 
     </script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCmt3hDLA1J2QF9K9vB_1ksDT82fuS7LHk&callback=initMap"
-    async defer></script>
+    <!--<script src="https://maps.googleapis.com/maps/api/js?key=<KEY>&callback=initMap"  async defer></script>-->
+
+    <div id="dialog" title="Insert Google Key">
+      <p>Please insert your google api Key</p>
+      <input id="gkey" type="text" size="50">
+      <input type="button" value="Accept" onClick="load_maps()">
+    </div>
+
+    <script>
+      function load_maps() {
+        var gkey = $("#gkey"). val();
+        var script = document.createElement("script");
+        script.src = "https://maps.googleapis.com/maps/api/js?key=" + gkey + "&callback=initMap";
+        document.head.appendChild(script);
+        $('#dialog').dialog('close')
+      }
+    </script>
+
   </body>
 </html>
