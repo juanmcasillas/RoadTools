@@ -122,3 +122,80 @@ PYTHON_PACKAGES=/usr/local/lib/python3.7/site-packages
 export GDAL_DRIVER_PATH=$QGIS/Resources/gdal/gdalplugins
 export GDAL_DATA=$QGIS/Contents/Resources/gdal
 export PYQGIS37=$QGIS/Frameworks/Python.framework/Versions/Current/bin/python3.7
+export PATH=$PATH:$QGIS/MacOS/bin
+```
+
+IMPORTANT NOTE: you can't call `gdal` commands from outside its path (`@executable_path`) to invoke it, you 
+have to use the **full path to the binary**. See the example:
+
+```
+cd /Archive/Src/RoadTools/raster
+gdalinfo subset.tif
+ERROR 1: dlopen(/Applications/QGIS3.12.app/Contents/Resources/gdal/gdalplugins/2.4/gdal_MrSID.dylib, 1): Library not loaded: @executable_path/lib/libltidsdk.dylib
+  Referenced from: /Applications/QGIS3.12.app/Contents/Resources/gdal/gdalplugins/2.4/gdal_MrSID.dylib
+  Reason: image not found
+ERROR 1: dlopen(/Applications/QGIS3.12.app/Contents/Resources/gdal/gdalplugins/2.4/gdal_MrSID.dylib, 1): Library not loaded: @executable_path/lib/libltidsdk.dylib
+  Referenced from: /Applications/QGIS3.12.app/Contents/Resources/gdal/gdalplugins/2.4/gdal_MrSID.dylib
+  Reason: image not found
+ERROR 1: dlopen(/Applications/QGIS3.12.app/Contents/Resources/gdal/gdalplugins/2.4/gdal_ECW_JP2ECW.dylib, 1): Library not loaded: @executable_path/lib/libNCSEcw.dylib
+  Referenced from: /Applications/QGIS3.12.app/Contents/Resources/gdal/gdalplugins/2.4/gdal_ECW_JP2ECW.dylib
+  Reason: image not found
+ERROR 1: dlopen(/Applications/QGIS3.12.app/Contents/Resources/gdal/gdalplugins/2.4/gdal_ECW_JP2ECW.dylib, 1): Library not loaded: @executable_path/lib/libNCSEcw.dylib
+  Referenced from: /Applications/QGIS3.12.app/Contents/Resources/gdal/gdalplugins/2.4/gdal_ECW_JP2ECW.dylib
+  Reason: image not found
+ERROR 1: dlopen(/Applications/QGIS3.12.app/Contents/Resources/gdal/gdalplugins/2.4/gdal_MG4Lidar.dylib, 1): Library not loaded: @executable_path/lib/liblti_lidar_dsdk.1.dylib
+  Referenced from: /Applications/QGIS3.12.app/Contents/Resources/gdal/gdalplugins/2.4/gdal_MG4Lidar.dylib
+  Reason: image not found
+ERROR 1: dlopen(/Applications/QGIS3.12.app/Contents/Resources/gdal/gdalplugins/2.4/gdal_MG4Lidar.dylib, 1): Library not loaded: @executable_path/lib/liblti_lidar_dsdk.1.dylib
+  Referenced from: /Applications/QGIS3.12.app/Contents/Resources/gdal/gdalplugins/2.4/gdal_MG4Lidar.dylib
+  Reason: image not found
+Driver: GTiff/GeoTIFF
+Files: subset.tif
+Size is 3219, 3692
+Coordinate System is `'
+Origin = (314725.870489399880171,4459286.118043545633554)
+Pixel Size = (0.250007080142450,0.250007080142450)
+Image Structure Metadata:
+  COMPRESSION=LZW
+  INTERLEAVE=BAND
+Corner Coordinates:
+Upper Left  (  314725.870, 4459286.118)
+Lower Left  (  314725.870, 4460209.144)
+Upper Right (  315530.643, 4459286.118)
+Lower Right (  315530.643, 4460209.144)
+Center      (  315128.257, 4459747.631)
+Band 1 Block=256x256 Type=Byte, ColorInterp=Red
+  NoData Value=0
+Band 2 Block=256x256 Type=Byte, ColorInterp=Green
+  NoData Value=0
+Band 3 Block=256x256 Type=Byte, ColorInterp=Blue
+  NoData Value=0
+```
+
+If you don't want to get error, call the command with the full path:
+
+```
+cd /Archive/Src/RoadTools/raster
+/Applications/QGIS3.12.app/Contents/MacOS/bin/gdalinfo subset.tif
+Driver: GTiff/GeoTIFF
+Files: subset.tif
+Size is 3219, 3692
+Coordinate System is `'
+Origin = (314725.870489399880171,4459286.118043545633554)
+Pixel Size = (0.250007080142450,0.250007080142450)
+Image Structure Metadata:
+  COMPRESSION=LZW
+  INTERLEAVE=BAND
+Corner Coordinates:
+Upper Left  (  314725.870, 4459286.118)
+Lower Left  (  314725.870, 4460209.144)
+Upper Right (  315530.643, 4459286.118)
+Lower Right (  315530.643, 4460209.144)
+Center      (  315128.257, 4459747.631)
+Band 1 Block=256x256 Type=Byte, ColorInterp=Red
+  NoData Value=0
+Band 2 Block=256x256 Type=Byte, ColorInterp=Green
+  NoData Value=0
+Band 3 Block=256x256 Type=Byte, ColorInterp=Blue
+  NoData Value=0
+```

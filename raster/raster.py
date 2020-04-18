@@ -40,6 +40,7 @@ from rasterio.transform import Affine
 import pyproj
 import numpy
 from pyproj import Transformer, transform
+import os
 
 def reproject_raster(in_path, out_path,crs):
     """reproject a raster image. Call this method if you don't have the .prj file
@@ -140,6 +141,25 @@ class RasterManager:
 
         return(np_points)
 
+    def add_prj(self, fout, overwrite=False):
+        """creates the .prj file if not found
+        
+        Arguments:
+            fout {string} -- output file destination
+        
+        Keyword Arguments:
+            overwrite {bool} -- overwrite the file if exists (default: {False})
+        
+        """
+
+        fdir = os.path.dirname(os.path.abspath(fout))
+        base = os.path.basename(fout) 
+        fname, fext = os.path.splitext(base)
+        prj_path = fdir + "%s.%s" % (fname, "prj")
+        if not os.path.exists(prj_path) or overwrite:
+            with open(prj_path, 'w') as f:
+                f.write(self.PROJCS)
+            print("created %s file" % prj_path)
 
     def rect(self, fin, fout, bounds, mode='asc'):
         """crops a rectangle of Bounds, from a file. Returns a asc (grid) or geotiff
@@ -158,6 +178,7 @@ class RasterManager:
 
 
         with rasterio.open(fin, mode='r') as dataset:
+            print(dataset.crs)
             print(dataset.bounds)
 
             #big
@@ -186,7 +207,8 @@ class RasterManager:
             transform = Affine.translation(lon_a + res_x, lat_a + res_y) * Affine.scale(res_x, res_x)
 
             self.outputs[mode](fout, width, height, window,transform)
-
+            self.add_prj(fout)
+            
         return True
 
     def save_to_asc(self, fout, width, height, window, transform):
@@ -205,12 +227,13 @@ class RasterManager:
                 width=width,
                 count=1,
                 dtype=window.dtype,
-                ##crs='epsg:25830',
+                crs='epsg:25830',
                 nodata=-99999.0,
                 transform=transform,
                 cellsize=1
         ) as dst:
             dst.write(window)
+
 
     def save_to_geotiff(self, fout, width, height, window, transform):
         """save to geotiff format. Internal
@@ -233,7 +256,7 @@ class RasterManager:
                 blockysize=256,
                 compress='lzw',
                 dtype=window.dtype,
-                ##crs='epsg:25830',
+                crs='epsg:25830',
                 interleave='band',
                 nodata=0,
                 tiled=True
@@ -280,4 +303,4 @@ if __name__ == "__main__":
     rm.rect(f_in_asc, f_out_asc, bounds ,mode='asc')
     # geotiff test
     # if platform.system().lower() == 'darwin':
-    rm.rect(f_in_ecw, f_out_ecw, bounds ,mode='geotiff')
+    # rm.rect(f_in_ecw, f_out_ecw, bounds ,mode='geotiff')
