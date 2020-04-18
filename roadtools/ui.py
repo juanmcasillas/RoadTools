@@ -40,6 +40,7 @@ class OBJECT_PT_Panel_LoadGPX(bpy.types.Panel):
 
         col.prop(roadtools, "gpx_altitude_offset", text="Height Offset",icon="TRIA_UP")
         col.prop(roadtools, "gpx_optimize", text="Use Optimizator")
+        col.prop(roadtools, "gpx_ortometric", text="Use Ortometric height")
         col.prop(roadtools, "gpx_file", text="File GPX",icon="RNDCURVE")
         self.layout.operator("roadtools.load_gpx", icon='CHECKMARK', text="Load GPX")
 

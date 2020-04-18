@@ -57,6 +57,12 @@ class ROADTools_Properties(PropertyGroup):
         default=True
     )
 
+    gpx_ortometric: bpy.props.BoolProperty(
+        name="Calculate ortometric value",
+        description="If true, the geoid value to calculate ortometric value",
+        default=True
+    )
+
     # the bounding box
     
     minLat: bpy.props.FloatProperty(

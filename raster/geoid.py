@@ -83,7 +83,7 @@ class GeoidHeight(object):
 
     def file_by_platform(self):
         if platform.system().lower() == 'darwin':
-            return "/Volumes/WINEXT/Cartography/geoids/egm2008-1.pgm"
+            return "/Volumes/Shared/Cartography/geoids/egm2008-1.pgm"
         if platform.system().lower() == 'windows':
             return "k:\cartography\geoids\egm2008-1.pgm"
         else: 

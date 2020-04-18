@@ -290,9 +290,9 @@ if __name__ == "__main__":
 
     import platform
     if platform.system().lower() == 'darwin':
-        f_in_asc="/Volumes/WINEXT/Cartography/MDT05/PNOA_MDT05_ETRS89_HU30_0578_LID.asc"
+        f_in_asc="/Volumes/Shared/Cartography/MDT05/PNOA_MDT05_ETRS89_HU30_0578_LID.asc"
         f_out_asc="subset.asc"
-        f_in_ecw="/Volumes/WINEXT/Cartography/PNOA/PNOA_MA_OF_ETRS89_HU30_h50_0578.ecw"
+        f_in_ecw="/Volumes/Shared/Cartography/PNOA/PNOA_MA_OF_ETRS89_HU30_h50_0578.ecw"
         f_out_ecw="subset.tif"
 
     else:
@@ -306,4 +306,4 @@ if __name__ == "__main__":
     rm.rect(f_in_asc, f_out_asc, bounds ,mode='asc')
     # geotiff test
     # if platform.system().lower() == 'darwin':
-    # rm.rect(f_in_ecw, f_out_ecw, bounds ,mode='geotiff')
+    rm.rect(f_in_ecw, f_out_ecw, bounds ,mode='geotiff')
