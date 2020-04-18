@@ -3,3 +3,5 @@ osm
 __pycache__/
 *.pyc
 blender_addons
+*.asc
+*.tif

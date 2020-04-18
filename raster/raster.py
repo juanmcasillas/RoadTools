@@ -158,7 +158,6 @@ class RasterManager:
 
 
         with rasterio.open(fin, mode='r') as dataset:
-            print(dataset.crs)
             print(dataset.bounds)
 
             #big
@@ -280,5 +279,5 @@ if __name__ == "__main__":
 
     rm.rect(f_in_asc, f_out_asc, bounds ,mode='asc')
     # geotiff test
-    if platform.system().lower() != 'darwin':
-        rm.rect(f_in_ecw, f_out_ecw, bounds ,mode='geotiff')
+    # if platform.system().lower() == 'darwin':
+    rm.rect(f_in_ecw, f_out_ecw, bounds ,mode='geotiff')

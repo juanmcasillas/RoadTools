@@ -23,6 +23,7 @@ from slopes import SlopeManager
 from gpxtoolbox import GPXItem
 import datetime
 from gpxbb import GPX_BB
+from geoid import GeoidHeight
 
 class ProjectionMapper:
     """
@@ -199,7 +200,7 @@ def draw_elev(elevs,smooth):
 
 
 
-def smooth_gpx( gpx_file, optimize=True, ground=False, output="output.gpx",title="output", height_offset=0.0):
+def smooth_gpx( gpx_file, optimize=True, zero=False, geoid=False, output="output.gpx",title="output", height_offset=0.0):
     "if output is none, no file is created :D"
 
     gpx_loader = GPXLoader(optimize=True) # allways smooth elevations
@@ -217,6 +218,12 @@ def smooth_gpx( gpx_file, optimize=True, ground=False, output="output.gpx",title
 
     pd = []
     min_elev = sys.maxsize
+
+    geoidman = None
+    if geoid:
+        print("Using Geoid (N) correction elevation")
+        geoidman = GeoidHeight()
+
     for p in points:
 
         # apply the height_offset in the elevation for all the points, if found
@@ -225,6 +232,11 @@ def smooth_gpx( gpx_file, optimize=True, ground=False, output="output.gpx",title
         pn = gpxpy.gpx.GPXTrackPoint(latitude=p[0],longitude=p[1],time=p[2],elevation=p[3])
         if pn.elevation < min_elev:
             min_elev = pn.elevation
+
+        # calculate geoid elevation and apply it
+        if geoid:
+             N = geoidman.get(pn.latitude, pn.longitude)
+             pn.elevation = pn.elevation-N
 
         pd.append(pn)
 
@@ -239,7 +251,7 @@ def smooth_gpx( gpx_file, optimize=True, ground=False, output="output.gpx",title
         print("Can't get any points. bailing out")
         return False
 
-    if ground:
+    if zero:
         # move all the points to the minimum elevation = 0:
         print("Mininum elevation: %3.2f m" % min_elev)
         for i in range(len(pd)):
@@ -260,11 +272,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-v", "--verbose", help="Show data about file and processing", action="count")
     parser.add_argument("-o", "--optimize", help="Optimize GPX input(filter)", action="store_true")
-    parser.add_argument("-g", "--ground", help="Set the mininum altitude as 0 reference", action="store_true")
+    parser.add_argument("-z", "--zero", help="Set the mininum altitude as 0 reference", action="store_true")
+    parser.add_argument("-g", "--geoid", help="Calculate the geoid N value and fix altitude", action="store_true")
     parser.add_argument("gpx_file", help="GPX file to load")
     args = parser.parse_args()
 
-    _,_,d = smooth_gpx( args.gpx_file, optimize=args.optimize, ground=args.ground, output="output.gpx",title="output")
+    _,_,d = smooth_gpx( args.gpx_file, optimize=args.optimize, zero=args.zero, geoid=args.geoid, output="output.gpx",title="output")
     print(d)
 
 

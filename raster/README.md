@@ -1,125 +1,124 @@
-https://gis.stackexchange.com/questions/44958/gdal-importerror-in-python-on-windows
-GDAL and ECW in windows (64 bit support, win10)
-MUST put the variables in the System Variables
-exporting on console doesn't work
+# How to install ECW support on Windows 10 and Mac OS 10.13.6
 
-install this packages
+Motivation: I want to run a python code based on `rasterio` to export bounding
+box for some ECW georeferenciated files. ECW is not supported "at first sight"
+due "problems" with the license. Here I explain how to get it working on the 
+two platforms.
 
+# Windows 10
+
+What you have to do:
+
+* GDAL and ECW in windows (64 bit support, win10)
+* MUST put the variables in the System Variables
+* exporting on console doesn't work
+* see [here](https://gis.stackexchange.com/questions/44958/gdal-importerror-in-python-on-windows) for more info
+
+
+Install this packages (windows installers in order), python3.7, then `rasterio` packages
+see their  [documentation](https://rasterio.readthedocs.io/en/latest/installation.html) on
+how to install it. You can get GDAL PACKAGES from [here](http://www.gisinternals.com/stable.php) and
+binary rasterio packages from [here](https://www.lfd.uci.edu/~gohlke/pythonlibs/#rasterio)
+
+
+```
 gdal-300-1911-x64-core.msi
 GDAL-3.0.4.win-amd64-py3.7.msi
 gdal-300-1911-x64-ecw-33.msi
 python-3.7.7-amd64.exe
 rasterio-1.1.3-cp37-cp37m-win_amd64.whl
+```
 
-https://rasterio.readthedocs.io/en/latest/installation.html
-https://www.lfd.uci.edu/~gohlke/pythonlibs/#rasterio
-http://www.gisinternals.com/stable.php
+Put the following **SYSTEM** variables (no user variables)
 
-rasterio works with ECW support (read only)
-
-SYSTEM variables (no user variables)
-PATH=C:\Program Files\GDAL (put it at the top, first one)
-GDAL_DATA=C:\Program Files\GDAL\gdal-data
-GDAL_DRIVER_PATH=C:\Program Files\GDAL\gdalplugins
+* `PATH=C:\Program Files\GDAL` (put it at the top, first one)
+* `GDAL_DATA=C:\Program Files\GDAL\gdal-data`
+* `GDAL_DRIVER_PATH=C:\Program Files\GDAL\gdalplugins`
 
 everything works fine.
 
-# mac version
-brew install gdal
-gdalinfo --version to see the version (2.4.4)
+# Mac OS 10.13.6 (High Sierra)
 
-Doesn't work. I installed the framework, and still no luck, and I loose the PROJ version
-for the 3.6 python (standard installed) so I have to revert to 3.7 (brew)
+Yes, I have High sierra. I can't compile `gdal` from brew due the X-Code version (9.02)
+and expects (10.21). Some big problems to update X-Code, so I try this version. I need
+this *only* to do the bounding box crop, so it fits my needs.
 
-See that
-https://github.com/ciaranevans/macos_ecw_qgis_support
-https://download.hexagongeospatial.com/downloads/ecw/erdas-ecw-jp2-sdk-v5-4-macosx?result=true
+* Get the QGIS installer for mac (3.12), all in one from [here](https://qgis.org/downloads/macos/qgis-macos-pr.dmg)
+* install python3.7 from brew in `/usr/local` (`brew install python3`) see [here](https://gist.github.com/alyssaq/f60393545173379e0f3f) for more info if you want
+* install your required modules with that interpreter. Mine is here:
 
-first, download ERDAS plugin (5.4)
-from https://download.hexagongeospatial.com/downloads/ecw/erdas-ecw-jp2-sdk-v5-4-macosx?result=true
-Desktop Read Only and
+```
+lrwxr-xr-x  1 root  admin  43 17 abr 21:53 /usr/local/bin/python37 -> /usr/local/Cellar/python3/3.7.7/bin/python3
+```
 
-cd /Hexagon/ERDASEcwJpeg2000SDK5.4.0/Desktop_Read-Only/lib/libc++/dynamic
-sudo mkdir /Library/Application\ Support/GDAL/2.4/Libraries
-sudo cp libNCSEcw.dylib /Library/Application\ Support/GDAL/2.4/Libraries/
-sudo cp -R ../../../etc /Library/Application\ Support/GDAL/2.4/
-tree /Library/Application\ Support/GDAL/2.4/ you should get a structure similar to:
-/Library/Application\ Support/GDAL/2.4/
-├── Libraries
-│   └── libNCSEcw.dylib
-└── etc
+* So I install my deps (I need pyproj and rasterio)
 
+```
+/usr/local/Cellar/python3/3.7.7/bin/pip3 install pyproj
+/usr/local/Cellar/python3/3.7.7/bin/pip3 install rasterio
+```
 
-second, the GDAL ECW plugin
-from http://www.kyngchaos.com/files/software/frameworks/GDAL-ECW_Plugin-2.4.0-1.dmg
+Lets break some things now. The idea is to use the boundled python3.7 with QGIS with their `gdal` and other running
+dependencies, to do the ECW work. I have to tune it first, due I can't install anything in the QGIS python enviroment.
 
+```
+QGIS=/Applications/QGIS3.12.app/Contents
+SITE_PACKAGES=$QGIS/Frameworks/Python.framework/Versions/Current/lib/python3.7/site-packages
+PYTHON_PACKAGES=/usr/local/lib/python3.7/site-packages
+```
 
-You MUST download and install the ECW SDK yourself.  I don't have the means to enforce export restrictions.  
-I'm sorry, but installation is a manual process for now, and a little more annoying than it used to be:
+## Copy rasterio and change libgdal library
 
-Go to https://download.hexagongeospatial.com.  Search for "ECW JP2 SDK" (it may be case sensitive).  
-Find and click "ERDAS ECW/JP2 SDK v5.4 (MacOSX)" (do not download a newer or older version).  Fill in the form and Submit it.  
-You may need to wait to confirm your email before downloading, or you should be able to download immediately if you've registered already.
+```
+cd $SITE_PACKAGES
+rsync -av $PYTHON_PACKAGES/rasterio-1.1.3.dist-info .
+rsync -av $PYTHON_PACKAGES/rasterio .
+cd rasterio
+cd .dylibs/
+mv libgdal.20.dylib  libgdal.20.dylib.old
+cp $QGIS/MacOS/lib/libgdal.20.dylib .
+```
 
-Unzip and open the downloaded disk image and run the installer, select the Desktop Read-Only Redistributable license (or Read-Write if you have a full license).  
-It will install into the top of your boot drive, /Hexagon.  Dig into this folder to lib/libc++/dynamic.
+## Copy affine (a required dependency of rasterio for my work)
 
-Copy the libNCSEcw.dylib file to (the /Library folder is likely hidden, so you need to Go->Go to Folder from your desktop and type in /Library):
+```
+cd $SITE_PACKAGES
+rsync -av $PYTHON_PACKAGES/affine .
+rsync -av $PYTHON_PACKAGES/affine-2.3.0.dist-info .
+```
 
-	/Library/Application Support/GDAL/2.4/Libraries
+## Replace the pyproj version 
 
-and copy the contents of the etc folder here to:
+**CAUTION** QGIS scripts may stop working after that.
 
-	/Library/Application Support/GDAL/2.4/etc
+```
+cd $SITE_PACKAGES
+mv pyproj pyproj-old
+rsync -av $PYTHON_PACKAGES/pyproj-2.6.0-py3.7-macosx-10.13-x86_64.egg/pyproj .
+```
 
-so it looks like (there may be other files in Libraries and PlugIns for other installed plugins):
+## set the enviroment variables, and do the magic
 
-	Library
-		Application Support
-			GDAL
-				2.4
-					etc
-               (files in here)
-					Libraries
-						libNCSEcw.dylib
-					PlugIns
-						gdal_ECW_JP2ECW.dylib
+You NEED to export this variables, or `gdal` doesn't read the plugins. So do IT before call your python script.
 
-You can trash the installed Hexagon folder when done to save a few hundred MB of space.
+```
+export GDAL_DRIVER_PATH=$QGIS/Resources/gdal/gdalplugins
+export GDAL_DATA=$QGIS/Contents/Resources/gdal
 
+cd $QGIS/MacOS/bin/
+./gdalinfo --formats
+./gdalinfo --formats | grep -i ecw
+```
 
-Driver Loading
+## Bonus: script with all the variables
 
-ECW includes JP2 read/write support, in addition to ECW of course.  My GDAL framework comes with JasPer and OpenJPEG JP2 R/W support.  Two other JP2 options are possible - MrSID JP2 and Kakadu.  Depending on the load order of drivers, any one of these could be used, though you might prefer one over another.
+Remember: that are my paths, and my installation, maybe you need to tune some paths (specially your python's dirs).
+You have to call your scripts with the python interpreter provided with QGIS (see `PYQGIS37` variable below)
 
-Drivers are loaded in this order, and drivers loaded first are first used:
-
-1. Plugins (not sure how GDAL orders them)
-
-2. Embedded drivers (ordered how they are in the source code)
-
-I think gdalinfo --formats lists drivers in the order they are loaded, so check that.
-
-To force one driver to be used over another, use the GDAL_SKIP environment variable.  In the default Mac OS X bash shell (Terminal):
-
-export GDAL_SKIP="[driver list]"
-
-[driver list] is a space-delimited list of the drivers you don't want to use, as named in the gdalinfo --formats listing.  ie to override JasPer:
-
-export GDAL_SKIP="JPEG2000"
-
-
-Support, Documentation, and Disclaimer
-
-This software is provided "as is", without any warranty or guarantee of its usability or fitness for any purpose.  See the ECW license for specific licensing info for the ECWJP2 SDK.
-
-I don't provide support on the usage of the included software.  See the documentation and help resources on their websites if you need such help.  All I can help with is the installation on Mac OS X, and problems related to its operation on Mac OS X.
-
-Documentation shortcuts are included for just the commandline tools.  These shortcuts range from full html documentation to running the command in a terminal window to display its built-in help (which can be very brief).
-
-I am not a C programmer and cannot help with programming involving the software.  I have enough general programming skills to deal with most build issues and some programming issues, and may be able to help with problems with this build that affect its inclusion in other software.
-
-
-- William Kyngesburye
-kyngchaos@kyngchaos.com
-http://www.kyngchaos.com/
+```
+export QGIS=/Applications/QGIS3.12.app/Contents
+SITE_PACKAGES=$QGIS/Frameworks/Python.framework/Versions/Current/lib/python3.7/site-packages
+PYTHON_PACKAGES=/usr/local/lib/python3.7/site-packages
+export GDAL_DRIVER_PATH=$QGIS/Resources/gdal/gdalplugins
+export GDAL_DATA=$QGIS/Contents/Resources/gdal
+export PYQGIS37=$QGIS/Frameworks/Python.framework/Versions/Current/bin/python3.7
