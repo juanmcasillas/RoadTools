@@ -75,6 +75,21 @@ yllcorner    4458361.610961413942
 cellsize     4.998588763842
 NODATA_value  -99999
 
+
+def dd_to_dms(deg, mode='lat'):
+    sign = 1 if deg > 0 else -1
+    d = int(deg)
+    md = abs(deg - d) * 60
+    m = int(md)
+    sd = (md - m) * 60
+
+    if mode.lower() == 'lat':
+        direction = 'N' if sign > 0 else 'S'
+    else:
+        direction = 'E' if sign > 0 else 'W'
+
+    return (abs(d), m, sd, direction)
+
 import numpy
 cols = 1149
 rows = 763
@@ -89,10 +104,10 @@ arr = numpy.reshape(arr,new_len)
 
 import pyproj
 cellsize=25
-utmx = 370750
-utmy = 4465375
-dest_utm30N =  pyproj.Proj(proj='utm', zone=30, ellps='WGS84')
-target_wgs84 =  pyproj.Proj('+init=epsg:4326')  # WGS84/Geographic
-point = (utmy, utmx)
-lon, lat = dest_utm30N(utmx, utmy)
+utmx = 342555
+utmy = 4467115
+dest_utm30N =  pyproj.Proj('+init=epsg:25830') # UTM30N  
+target_wgs84 = pyproj.Proj('+init=epsg:4326')  # WGS84/Geographic
+point = (utmx, utmy)
+lon, lat = pyproj.transform(dest_utm30N, target_wgs84, *point)
 print(lat,lon)

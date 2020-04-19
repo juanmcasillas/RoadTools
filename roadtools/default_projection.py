@@ -13,6 +13,7 @@
 import sys
 import bpy
 import math
+import pyproj
 
 _isBlender280 = bpy.app.version[1] >= 80
 
@@ -41,35 +42,39 @@ class DefaultProjection:
         return projection
 
 class TransverseMercator:
-    radius = 6378137
+
 
     def __init__(self, **kwargs):
         # setting default values
         self.lat = 0 # in degrees
         self.lon = 0 # in degrees
-        self.k = 1 # scale factor
-        
+        self.utm30N = pyproj.Proj('+init=epsg:25830')   # UTM30N
+        self.wgs84 =  pyproj.Proj('+init=epsg:4326')    # WGS84/Geographic
+
         for attr in kwargs:
             setattr(self, attr, kwargs[attr])
         self.latInRadians = math.radians(self.lat)
+        
+        # generate the x,y point of the "center" of projection
+        self.utmx, self.utmy = pyproj.transform(self.wgs84, self.utm30N, self.lon, self.lat)
+        print("Offset UTM", self.utmx, self.utmy)
 
     def fromGeographic(self, lat, lon):
-        lat = math.radians(lat)
-        lon = math.radians(lon-self.lon)
-        B = math.sin(lon) * math.cos(lat)
-        x = 0.5 * self.k * self.radius * math.log((1+B)/(1-B))
-        y = self.k * self.radius * ( math.atan(math.tan(lat)/math.cos(lon)) - self.latInRadians )
-        return (x,y)
+        # from WGS84 to utm
+        print("current values (lon,lat)", self.lon, self.lat)
+        point = (lon,lat)
+        print("from",point)
+        point_r = pyproj.transform(self.wgs84, self.utm30N, *point)
+        print(point_r)
+        point_r = ( point_r[0]-self.utmx, point_r[1]-self.utmy )
+        print("to",point_r)
+        return(point_r)
 
     def toGeographic(self, x, y):
-        x = x/(self.k * self.radius)
-        y = y/(self.k * self.radius)
-        D = y + self.latInRadians
-        lon = math.atan(math.sinh(x)/math.cos(D))
-        lat = math.asin(math.sin(D)/math.cosh(x))
-
-        lon = self.lon + math.degrees(lon)
-        lat = math.degrees(lat)
-        return (lat, lon)
+        # from UTM to WGS84
+        # don't know if works
+        point = (x,y)
+        point_r = pyproj.transform(self.utm30N, self.wgs84, *point)
+        return (point_r[0]+self.lon, point_r[0].self.lat)
 
 
