@@ -96,6 +96,9 @@
 import re
 import sys
 from xml.dom import minidom
+import argparse
+
+from raster import Bounds
 
 class MTN:
     """calculates the MTN sheet for the given lat, lon pair or bounds
@@ -411,19 +414,39 @@ class MTN:
 
 
 if __name__ == "__main__":
-    lat = '''43º 46' 7.01" N''' # 43.768613888888886
-    lat = '''8º 0' 2.86" W''' # -8.000794444444445
+    # lat = '''43º 46' 7.01" N''' # 43.768613888888886
+    # lat = '''8º 0' 2.86" W''' # -8.000794444444445
 
-    print(MTN.dms_to_dd_s(lat))
-    print(MTN.dd_to_dms(-8.000794444444445,mode='lon'))
-    print(MTN.dd_to_dms_s(-8.000794444444445,mode='lon'))
+    # print(MTN.dms_to_dd_s(lat))
+    # print(MTN.dd_to_dms(-8.000794444444445,mode='lon'))
+    # print(MTN.dd_to_dms_s(-8.000794444444445,mode='lon'))
 
-    print(MTN.dms_to_dd_s(MTN.origin_dms[0]))
-    print(MTN.dms_to_dd_s(MTN.origin_dms[1]))
+    # print(MTN.dms_to_dd_s(MTN.origin_dms[0]))
+    # print(MTN.dms_to_dd_s(MTN.origin_dms[1]))
 
-    print(MTN.where(-3.485088888888889,40.37361111111111))
-    #print(MTN.where(float(sys.argv[1]),float(sys.argv[2])))
+    # print(MTN.where(-3.485088888888889,40.37361111111111))
+    # #print(MTN.where(float(sys.argv[1]),float(sys.argv[2])))
 
-    print(MTN.to_MTN(-3.48,40.37))
-    print(MTN.to_MTN(lon=-3.48,lat=40.37))
-    print(MTN.to_MTN(top=40.263546616792624,left=-5.1788258082264305,bottom=39.25541390947118,right=-5.169102583586535))
+    # print(MTN.to_MTN(-3.48,40.37))
+    # print(MTN.to_MTN(lon=-3.48,lat=40.37))
+    # print(MTN.to_MTN(top=40.263546616792624,left=-5.1788258082264305,bottom=39.25541390947118,right=-5.169102583586535))
+
+
+    parser = argparse.ArgumentParser(usage=None,description="MTN sheet finder. Looks for the sheet")
+
+    maingroup = parser.add_argument_group()
+    maingroup.add_argument("-v", "--verbose", help="Show data about file and processing", action="count")
+    exgroup = parser.add_argument_group(title='Json or Coords')
+    group = exgroup.add_mutually_exclusive_group(required=True)
+    group.add_argument('-j','--json',nargs=1,help='''{"top":40.4,"left":-4.32,"bottom":40.36,"right":-4.2}''')
+    group.add_argument('-c','--coords',nargs=2, metavar=('lon','lat'), type=float)
+    args = parser.parse_args()
+
+
+    if args.coords:
+        print(MTN.to_MTN(lon=args.coords[0],lat=args.coords[1]))
+
+    else:
+        bounds = Bounds(jsonstr=args.json[0])
+        print(MTN.to_MTN(top=bounds.top,left=bounds.left,bottom=bounds.bottom,right=bounds.right))
+

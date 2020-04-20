@@ -1,0 +1,24 @@
+Top (N): 40.41256067790671
+Left (W): -4.327460021972664
+Right (E): -4.234244995117193
+Bottom (S): 40.362505029505485
+
+
+# 
+# get the sheet we need
+# 
+
+python37 mtn.py -v -j '{"top":40.41125364200409,"left":-4.320936889648445,"bottom":40.36328982190341,"right":-4.238021545410162}'
+
+that says that is 557
+{'MTN50': [[(1722, 557)]], 'MTN25': [[(3444, 557)]], 'MTN10': [[(67087, 557)], [(67088, 557)], [(68087, 557)], [(68088, 557)]]}
+
+$PYQGIS37 raster.py -v -c 40.41256067790671 -4.327460021972664 -4.234244995117193 40.362505029505485 IN OUT asc
+
+
+$PYQGIS37 raster.py -v -j '{"top":40.41125364200409,"left":-4.320936889648445,"bottom":40.36328982190341,"right":-4.238021545410162}' IN OUT asc
+
+# get the asc subset
+
+$PYQGIS37 raster.py -v -j '{"top":40.41125364200409,"left":-4.320936889648445,"bottom":40.36328982190341,"right":-4.238021545410162}' /Volumes/Shared/Cartography/MDT25/PNOA_MDT25_ETRS89_HU30_0557_LID.asc subset.asc asc
+$PYQGIS37 raster.py -v -j '{"top":40.41125364200409,"left":-4.320936889648445,"bottom":40.36328982190341,"right":-4.238021545410162}'  /Volumes/Shared/Cartography/PNOA/PNOA_MA_OF_ETRS89_HU30_h50_0557.ecw subset.tif geotiff

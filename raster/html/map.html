@@ -70,12 +70,19 @@
             var ne = rectangle.getBounds().getNorthEast();
             var sw = rectangle.getBounds().getSouthWest();
 
+            var bounds = new Object();
+            bounds.top = ne.lat();
+            bounds.left = sw.lng();
+            bounds.bottom = sw.lat();
+            bounds.right = ne.lng();
+
             var contentString = '<b>Rectangle Selected</b><br>' +
                 'Top (N): '    + ne.lat() + '<br>' +
                 'Left (W): '   + sw.lng() + '<br>' +
-                'Right (E): '  + ne.lng() + '<br>' +
-                'Bottom (S): ' + sw.lat() + '<br>';
-
+                'Bottom (S): ' + sw.lat() + '<br>' +
+                'Right (E): '  + ne.lng() + '<br><br>' +
+                JSON.stringify(bounds);
+     
             // Set the info window's content and position.
             infoWindow.setContent(contentString);
             infoWindow.setPosition(ne);

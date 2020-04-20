@@ -41,6 +41,8 @@ import pyproj
 import numpy
 from pyproj import Transformer, transform
 import os
+import argparse
+import json
 
 def reproject_raster(in_path, out_path,crs):
     """reproject a raster image. Call this method if you don't have the .prj file
@@ -78,12 +80,28 @@ def reproject_raster(in_path, out_path,crs):
     return(out_path)
 
 
+
+
+
+
 class Bounds:
-    def __init__(self, top=0.0, left=0.0, bottom=0.0, right=0.0):
+    def __init__(self, top=0.0, left=0.0, bottom=0.0, right=0.0, jsonstr=None):
         self.top = top # north
         self.left = left # west
         self.bottom = bottom # south
         self.right = right # east
+
+        if jsonstr:
+            ret = json.loads(jsonstr)
+            for i in ["top","left","bottom","right"]:
+                setattr(self,i, ret[i])
+        
+    def __repr__(self):
+        s = "<%s top=%f, left=%f, bottom=%f, right=%f>" % (
+            self.__class__.__name__, self.top, self.left, self.bottom,self.right
+        )
+        return s
+    
 
 class RasterManager:
     def __init__(self):
@@ -152,9 +170,11 @@ class RasterManager:
 
         """
 
+        if crs is None:
+            crs = self.PROJCS
         P = pyproj.Proj(crs)
         wkt = P.crs.to_wkt(version=pyproj.enums.WktVersion.WKT1_ESRI)
-        
+
         fdir = os.path.dirname(os.path.abspath(fout))
         base = os.path.basename(fout)
         fname, fext = os.path.splitext(base)
@@ -207,7 +227,8 @@ class RasterManager:
             # Affine.scale(res_x, res_x) should be Affine.scale(res_x, res_y) but this generates
             # non square pixels, and insert dx,dy values, that are not supported by noone.
             # tested with GlobalMapper, and it works fine.
-            transform = Affine.translation(lon_a + res_x, lat_a + res_y) * Affine.scale(res_x, res_x)
+            #transform = Affine.translation(lon_a + res_x, lat_a + res_y) * Affine.scale(res_x, res_x)
+            transform = dataset.window_transform(bbox)
 
             self.outputs[mode](fout, width, height, window, transform, dataset.crs)
             self.add_prj(fout, dataset.crs)
@@ -268,42 +289,31 @@ class RasterManager:
 
 if __name__ == "__main__":
 
-    rm = RasterManager()
-    # asc test
-    # picadas
-    # bounds = Bounds(top=40.4076142700,left=-4.3395996094,bottom=40.3579254107,right=-4.2232131958)
-    # f_in="K:\Cartography\MDT05\PNOA_MDT05_ETRS89_HU30_0557_LID.asc"
-    # f_out="K:\Cartography\MDT05\subset.asc"
-    # rm.rect(f_in, f_out, bounds ,mode='asc')
-    # # geotiff test
-    # f_in="K:\Cartography\PNOA\PNOA_MA_OF_ETRS89_HU30_h50_0557.ecw"
-    # f_out="K:\Cartography\PNOA\subset.tif"
-    # rm.rect(f_in, f_out, bounds ,mode='geotiff')
+    parser = argparse.ArgumentParser(usage=None,description="Raster Manager. Extract Bounds from big files")
 
-    # galayos
-    #Top (N): 40.263546616792624
-    #Left (W): -5.1788258082264305
-    #Right (E): -5.169102583586535
-    #Bottom (S): 40.25541390947118
+    maingroup = parser.add_argument_group()
+    maingroup.add_argument("-v", "--verbose", help="Show data about file and processing", action="count")
+    maingroup.add_argument("infile", help="Input File")
+    maingroup.add_argument("outfile", help="Output File")
+    maingroup.add_argument("product", help="Asc, GeoTiff (default=Asc)", default="asc")
 
-    bounds = Bounds(top=40.263546616792624,left=-5.1788258082264305,bottom=40.25541390947118,right=-5.169102583586535)
+    exgroup = parser.add_argument_group(title='Json or Coords')
+    group = exgroup.add_mutually_exclusive_group(required=True)
+    group.add_argument('-j','--json',nargs=1,help='''{"top":40.4,"left":-4.32,"bottom":40.36,"right":-4.2}''')
+    group.add_argument('-c','--coords',nargs=4, metavar=('top','left','bottom','right'), type=float)
+    args = parser.parse_args()
 
-    import platform
-    if platform.system().lower() == 'darwin':
-        f_in_asc="/Volumes/Shared/Cartography/MDT05/PNOA_MDT05_ETRS89_HU30_0578_LID.asc"
-        f_out_asc="subset.asc"
-        f_in_ecw="/Volumes/Shared/Cartography/PNOA/PNOA_MA_OF_ETRS89_HU30_h50_0578.ecw"
-        f_out_ecw="subset.tif"
 
+    rasterman = RasterManager()
+    if args.product not in rasterman.outputs.keys():
+        raise TypeError("product not valid: %s" % args.product)
+
+    if args.coords:
+        bounds = Bounds(top=args.coords[0],left=args.coords[1],bottom=args.coords[2],right=args.coords[3])
     else:
+        bounds = Bounds(jsonstr=args.json[0])
+    
+    if args.verbose:
+        print(bounds)
 
-        f_in_asc="K:\Cartography\MDT05\PNOA_MDT05_ETRS89_HU30_0578_LID.asc"
-        f_out_asc="K:\Cartography\MDT05\subset.asc"
-        f_in_ecw="K:\Cartography\PNOA\PNOA_MA_OF_ETRS89_HU30_h50_0578.ecw"
-        f_out_ecw="K:\Cartography\PNOA\subset.tif"
-
-
-    rm.rect(f_in_asc, f_out_asc, bounds ,mode='asc')
-    # geotiff test
-    # if platform.system().lower() == 'darwin':
-    rm.rect(f_in_ecw, f_out_ecw, bounds ,mode='geotiff')
+    rasterman.rect(args.infile, args.outfile, bounds, mode=args.product)
