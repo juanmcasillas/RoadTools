@@ -51,6 +51,12 @@ class ROADTools_Properties(PropertyGroup):
         default=0.0
     )
 
+    gpx_xy_offset: bpy.props.FloatProperty(
+        name="gpx XY offset",
+        description="GPX XY offset to apply on import",
+        default=0.0
+    )
+
     gpx_optimize: bpy.props.BoolProperty(
         name="Use the point optimizator",
         description="If true, use point optimizator. Else read original points",

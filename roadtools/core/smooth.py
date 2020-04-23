@@ -200,7 +200,7 @@ def draw_elev(elevs,smooth):
 
 
 
-def smooth_gpx( gpx_file, optimize=True, zero=False, geoid=False, output="output.gpx",title="output", height_offset=0.0):
+def smooth_gpx( gpx_file, optimize=True, zero=False, geoid=False, output="output.gpx",title="output", height_offset=0.0, xy_offset=0.0):
     "if output is none, no file is created :D"
 
     gpx_loader = GPXLoader(optimize=True) # allways smooth elevations
@@ -238,6 +238,7 @@ def smooth_gpx( gpx_file, optimize=True, zero=False, geoid=False, output="output
              N = geoidman.get(pn.latitude, pn.longitude)
              pn.elevation = pn.elevation-N
 
+
         pd.append(pn)
 
     if optimize:
@@ -257,6 +258,36 @@ def smooth_gpx( gpx_file, optimize=True, zero=False, geoid=False, output="output
         for i in range(len(pd)):
             pd[i].elevation -= min_elev
 
+   
+    # calculate a offset in the XY plane. This is useful to move the road
+    # to the left, or to the right. Note that most of GPX tracks are recorder
+    # on bicycle, and I run in the most right side of the road, when the road's
+    # center is about 3.5-4m left
+
+    if xy_offset != 0.0:
+        move_offset =abs(xy_offset) #(5 meters)
+        to_left = True if xy_offset < 0 else False 
+        for i in range(len(pd)-1):
+            a = pd[i]
+            b = pd[i+1]
+            if a == b:
+                continue
+            v = (b.longitude-a.longitude, b.latitude - a.latitude)
+            vt = (-v[1], v[0]) 
+            
+            vmod = math.sqrt( vt[0]*vt[0] + vt[1]*vt[1])
+            
+            vt = ( vt[0] / vmod, vt[1] / vmod)
+            # the vector is opposite to the standard rotation (CCW)
+            # if you want to move to the right (CW)
+            if not to_left:
+                vt = (-vt[0], -vt[1])
+
+            offset_lat, offset_lon, _, _  = bb.meters_per_deg(pd[i].latitude, pd[i].longitude)
+            pd[i].longitude += vt[0]* (move_offset / offset_lon)
+            pd[i].latitude  += vt[1]* (move_offset / offset_lat)
+
+
     if output:
         gpx_out = GPXItem()
         data = gpx_out.CreateGPX11(pd, trk_name=title)
@@ -274,10 +305,11 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--optimize", help="Optimize GPX input(filter)", action="store_true")
     parser.add_argument("-z", "--zero", help="Set the mininum altitude as 0 reference", action="store_true")
     parser.add_argument("-g", "--geoid", help="Calculate the geoid N value and fix altitude", action="store_true")
+    parser.add_argument("-m", "--move", help="Offset to the left <0 or right >0 in the XY plane", type=float, default=0.0)
     parser.add_argument("gpx_file", help="GPX file to load")
     args = parser.parse_args()
 
-    _,_,d = smooth_gpx( args.gpx_file, optimize=args.optimize, zero=args.zero, geoid=args.geoid, output="output.gpx",title="output")
+    _,_,d = smooth_gpx( args.gpx_file, optimize=args.optimize, zero=args.zero, geoid=args.geoid, xy_offset=args.move, output="output.gpx",title="output")
     print(d)
 
 

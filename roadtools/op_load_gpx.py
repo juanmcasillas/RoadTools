@@ -59,6 +59,7 @@ class ROADTOOLS_OT_Load_Gpx(Operator):
         try:
             ret, msg, obj, length = gpx.import_gpx(roadtools.gpx_file,
                                 height_offset=roadtools.gpx_altitude_offset,
+                                xy_offset=roadtools.gpx_xy_offset,
                                 optimize=roadtools.gpx_optimize,
                                 ground=roadtools.gpx_ortometric)
             #a.bounding_box.expand(1000,500,500,1000)

@@ -108,6 +108,8 @@ class RasterManager:
         self.outputs = {}
         self.outputs['asc'] = self.save_to_asc
         self.outputs['geotiff'] = self.save_to_geotiff
+        self.outputs['png'] = self.save_to_png
+        self.outputs['jpg'] = self.save_to_jpg
         self.PROJCS="""PROJCS["ETRS_1989_UTM_Zone_30N",GEOGCS["GCS_ETRS_1989",DATUM["D_ETRS_1989",SPHEROID["GRS_1980",6378137.0,298.257222101]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]],PROJECTION["Transverse_Mercator"],PARAMETER["False_Easting",500000.0],PARAMETER["False_Northing",0.0],PARAMETER["Central_Meridian",-3.0],PARAMETER["Scale_Factor",0.9996],PARAMETER["Latitude_Of_Origin",0.0],UNIT["Meter",1.0]]"""
 
         self.dest_wgs84 =  pyproj.Proj('EPSG:4326') # WGS84/Geographic
@@ -287,6 +289,46 @@ class RasterManager:
         ) as dst:
             dst.write(window)
 
+    def save_to_png(self, fout, width, height, window, transform, crs):
+        """save to geotiff format. Internal
+
+        Arguments:
+            fout {[type]} -- [description]
+            width {[type]} -- [description]
+            height {[type]} -- [description]
+            window {[type]} -- [description]
+            transform {[type]} -- [description]
+        """
+        with rasterio.open(fout,'w',
+                driver='PNG',
+                height=height,
+                width=width,
+                count=window.shape[0],
+                dtype=window.dtype,
+                transform=transform
+        ) as dst:
+            dst.write(window)        
+
+    def save_to_jpg(self, fout, width, height, window, transform, crs):
+        """save to geotiff format. Internal
+
+        Arguments:
+            fout {[type]} -- [description]
+            width {[type]} -- [description]
+            height {[type]} -- [description]
+            window {[type]} -- [description]
+            transform {[type]} -- [description]
+        """
+        with rasterio.open(fout,'w',
+                driver='JPEG',
+                height=height,
+                width=width,
+                count=window.shape[0],
+                dtype=window.dtype,
+                transform=transform
+        ) as dst:
+            dst.write(window)            
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(usage=None,description="Raster Manager. Extract Bounds from big files")
@@ -317,3 +359,4 @@ if __name__ == "__main__":
         print(bounds)
 
     rasterman.rect(args.infile, args.outfile, bounds, mode=args.product)
+  

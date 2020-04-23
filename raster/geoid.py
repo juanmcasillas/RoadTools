@@ -240,5 +240,6 @@ class GeoidHeight(object):
 #     N = calculated with this program
 #     "real_gps" = gps - N
 
-a = GeoidHeight()
-print(a.get( 40.33, -4.22))
+if __name__ == "__main__":
+    a = GeoidHeight()
+    print(a.get( 40.33, -4.22))

@@ -22,3 +22,5 @@ $PYQGIS37 raster.py -v -j '{"top":40.41125364200409,"left":-4.320936889648445,"b
 
 $PYQGIS37 raster.py -v -j '{"top":40.41125364200409,"left":-4.320936889648445,"bottom":40.36328982190341,"right":-4.238021545410162}' /Volumes/Shared/Cartography/MDT25/PNOA_MDT25_ETRS89_HU30_0557_LID.asc subset.asc asc
 $PYQGIS37 raster.py -v -j '{"top":40.41125364200409,"left":-4.320936889648445,"bottom":40.36328982190341,"right":-4.238021545410162}'  /Volumes/Shared/Cartography/PNOA/PNOA_MA_OF_ETRS89_HU30_h50_0557.ecw subset.tif geotiff
+
+$PYQGIS37 raster.py -v -j '{"top":40.41125364200409,"left":-4.320936889648445,"bottom":40.36328982190341,"right":-4.238021545410162}' /Volumes/Shared/Cartography/MDT05/PNOA_MDT05_ETRS89_HU30_0557_LID.asc subset.asc asc

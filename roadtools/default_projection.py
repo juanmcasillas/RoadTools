@@ -53,21 +53,18 @@ class TransverseMercator:
 
         for attr in kwargs:
             setattr(self, attr, kwargs[attr])
-        self.latInRadians = math.radians(self.lat)
+ 
         
         # generate the x,y point of the "center" of projection
         self.utmx, self.utmy = pyproj.transform(self.wgs84, self.utm30N, self.lon, self.lat)
-        print("Offset UTM", self.utmx, self.utmy)
+
 
     def fromGeographic(self, lat, lon):
         # from WGS84 to utm
-        print("current values (lon,lat)", self.lon, self.lat)
+        #print("current values (lon,lat)", self.lon, self.lat)
         point = (lon,lat)
-        print("from",point)
         point_r = pyproj.transform(self.wgs84, self.utm30N, *point)
-        print(point_r)
         point_r = ( point_r[0]-self.utmx, point_r[1]-self.utmy )
-        print("to",point_r)
         return(point_r)
 
     def toGeographic(self, x, y):

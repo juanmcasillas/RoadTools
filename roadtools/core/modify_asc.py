@@ -56,8 +56,8 @@ class RasterEdit(RasterManager):
             print(dataset.bounds)
             print(dataset.width, dataset.height)
             data = dataset.read()
-   
- 
+
+
             avg_ahead = 10
             for count in range(len(points)):
                 i = points[count]
@@ -87,12 +87,12 @@ class RasterEdit(RasterManager):
                     #print(x,y, dx, dy)
                     if dx == 2 or dy == 2:
                         data[0][y,x] = data[0][y,x] - (data[0][y,x]-avg_elev)/5
-                    elif dx == 1 or dy == 1:                        
+                    elif dx == 1 or dy == 1:
                         data[0][y,x] = data[0][y,x] - (data[0][y,x]-avg_elev)/3
-                    else: 
+                    else:
                         data[0][y,x]= avg_elev-0.11
 
-   
+
 
             with rasterio.open(fout,'w',
                 driver='AAIgrid',
@@ -120,10 +120,15 @@ if __name__ == "__main__":
 
     maingroup = parser.add_argument_group()
     maingroup.add_argument("-v", "--verbose", help="Show data about file and processing", action="count")
+    parser.add_argument("-o", "--optimize", help="Optimize GPX input(filter)", action="store_true")
+    parser.add_argument("-mxy", "--movexy", help="Offset to the left <0 or right >0 in the XY plane", type=float, default=0.0)
+    parser.add_argument("-melev", "--moveelev", help="Offset Height", type=float, default=0.0)
+    parser.add_argument("-g", "--geoid", help="Calculate the geoid N value and fix altitude", action="store_true")
+
     maingroup.add_argument("gpxfile", help="GPX file")
     maingroup.add_argument("infile", help="Input File")
     maingroup.add_argument("outfile", help="Output File")
-    
+
 
     exgroup = parser.add_argument_group(title='Json or Coords')
     group = exgroup.add_mutually_exclusive_group(required=True)
@@ -135,12 +140,18 @@ if __name__ == "__main__":
         bounds = Bounds(top=args.coords[0],left=args.coords[1],bottom=args.coords[2],right=args.coords[3])
     else:
         bounds = Bounds(jsonstr=args.json[0])
-    
+
     if args.verbose:
         print(bounds)
 
     # read the gpx
     rasteredit = RasterEdit()
 
-    points,gpx_bounds,distance = smooth_gpx( args.gpxfile, optimize=True, zero=False, geoid=True, output=None)
+    points,gpx_bounds,distance = smooth_gpx(args.gpxfile,
+                optimize=args.optimize,
+                height_offset=args.moveelev,
+                xy_offset=args.movexy,
+                zero=False,
+                geoid=args.geoid,
+                output=None)
     rasteredit.rect(args.infile, args.outfile, bounds, points)
