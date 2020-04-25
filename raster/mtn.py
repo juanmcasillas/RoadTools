@@ -376,7 +376,10 @@ class MTN:
             lon = args[0]
             lat = args[1]
             return MTN.where(lon, lat)
-
+        elif len(kwargs) == 1:
+            if "bounds" in kwargs.keys():
+                for i in [ "top", "bottom", "left", "right" ]:
+                    kwargs[i] = kwargs["bounds"].__dict__[i]
         elif len(kwargs) == 2:
             if "lon" in kwargs.keys(): lon= kwargs["lon"]
             if "lat" in kwargs.keys(): lat= kwargs["lat"]
@@ -402,7 +405,7 @@ class MTN:
         for corner in [TL,BL,TR,BR]:
             for mtn in ['MTN50', 'MTN25', 'MTN10']:
                 if corner[mtn][0] not in ret[mtn].keys():
-                    ret[mtn][corner[mtn][0]] = corner[mtn]
+                    ret[mtn][corner[mtn][0]] = corner[mtn][0]
 
         # build the standard return
 

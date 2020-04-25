@@ -43,6 +43,9 @@ from pyproj import Transformer, transform
 import os
 import argparse
 import json
+import rasterio.merge
+import subprocess
+import tempfile
 
 def reproject_raster(in_path, out_path,crs):
     """reproject a raster image. Call this method if you don't have the .prj file
@@ -92,10 +95,22 @@ class Bounds:
         self.right = right # east
 
         if jsonstr:
-            ret = json.loads(jsonstr)
-            for i in ["top","left","bottom","right"]:
-                setattr(self,i, ret[i])
-        
+            self.from_string(jsonstr)
+
+    def from_string(self, jsonstr):
+        ret = json.loads(jsonstr)
+        for i in ["top","left","bottom","right"]:
+            setattr(self,i, ret[i])
+        return self
+
+
+    def from_file(self, fname):
+        with open(fname,"r") as f:
+            data = f.read()
+            ret = json.loads(data)
+            self.from_string(data)
+        return self
+
     def __repr__(self):
         s = "<%s top=%f, left=%f, bottom=%f, right=%f>" % (
             self.__class__.__name__, self.top, self.left, self.bottom,self.right
@@ -114,7 +129,8 @@ class RasterManager:
 
         self.dest_wgs84 =  pyproj.Proj('EPSG:4326') # WGS84/Geographic
         self.target_utm30N =  pyproj.Proj(self.PROJCS) # WGS84 UTM Zone 30N EPSG:25830
-
+        self.epsg_pnoa = "EPSG:25830"
+        self.gdal_dir = '/Applications/QGIS3.12.app/Contents/MacOS/bin'
 
     def wgs84_to_utm(self, lon,lat):
         """convert from lat, lon in WGS84 (GPS) 'EPSG:4326' UTM zone 30N 'EPSG:25830'
@@ -210,25 +226,25 @@ class RasterManager:
             lon_a, lat_a = self.wgs84_to_utm(bounds.left, bounds.top) # lon, lat # TOPLEFT
             lon_b, lat_b = self.wgs84_to_utm(bounds.right, bounds.bottom) # lon, lat #BOTTOMRIGHT
 
+            print("NW:", lon_a, lat_a)
+            print("SE:", lon_b, lat_b)
             # this return in row, col (Y,X)
-            py_a,px_a = dataset.index( lon_a, lat_a )
-            py_b,px_b = dataset.index( lon_b, lat_b )
-
-            width = px_b - px_a
-            height = py_b - py_a
-
-            print("A:",lon_a, lat_a,":", px_a, py_a)
-            print("B:",lon_b, lat_b,":", px_b, py_b)
-            print("width, height: ", width, height)
+            # py_a,px_a = dataset.index( lon_a, lat_a )
+            # py_b,px_b = dataset.index( lon_b, lat_b )
+            # width = px_b - px_a
+            # height = py_b - py_a
+            # print("A:",lon_a, lat_a,":", px_a, py_a)
+            # print("B:",lon_b, lat_b,":", px_b, py_b)
+            # print("width, height: ", width, height)
 
             bbox = from_bounds(lon_a, lat_b, lon_b, lat_a, dataset.transform) #left, bottom, right, top
             window = dataset.read(window=bbox) # 1 -> 1 channel, nothing, all
-            res_x = (lon_b - lon_a) / width
-            res_y = (lat_b - lat_a) / height
             # this is the point (A) scaled, so we can locate coords inside.
             # Affine.scale(res_x, res_x) should be Affine.scale(res_x, res_y) but this generates
             # non square pixels, and insert dx,dy values, that are not supported by noone.
             # tested with GlobalMapper, and it works fine.
+            # res_x = (lon_b - lon_a) / width
+            # res_y = (lat_b - lat_a) / height
             #transform = Affine.translation(lon_a + res_x, lat_a + res_y) * Affine.scale(res_x, res_x)
             transform = dataset.window_transform(bbox)
 
@@ -236,6 +252,64 @@ class RasterManager:
             self.add_prj(fout, dataset.crs)
 
         return True
+
+    def rect_m(self, filenames, fout, bounds, mode='asc'):
+        """TBD. Use merge to build a big map"""
+
+        with rasterio.open(filenames[0], mode='r') as dataset:
+            print(dataset.crs)
+            print(dataset.bounds)
+
+            lon_a, lat_a = self.wgs84_to_utm(bounds.left, bounds.top) # lon, lat # TOPLEFT
+            lon_b, lat_b = self.wgs84_to_utm(bounds.right, bounds.bottom) # lon, lat #BOTTOMRIGHT
+
+            print("NW:", lon_a, lat_a)
+            print("SE:", lon_b, lat_b)
+
+            utm_bounds = (lon_a, lat_b, lon_b, lat_a)
+            fds = []
+            for i in filenames:
+                src = rasterio.open(i,mode='r')
+                fds.append(src)
+
+            #if mode in [ 'geotiff', 'png', 'jpg' ]:
+            #    return self.rect_gdal( utm_bounds, filenames, fout)
+
+            print("merging files")
+            big_array, big_transform = rasterio.merge.merge(fds,bounds=utm_bounds,precision=50)
+            print(big_array.shape, big_transform)
+
+            height = big_array.shape[1]
+            width = big_array.shape[2]
+            self.outputs[mode](fout, width, height, big_array, big_transform, dataset.crs)
+            self.add_prj(fout, dataset.crs)
+        return True
+
+    def rect_gdal(self, bounds, filenames, fout):
+        
+        gda_lbuildvrt = "%s/gdalbuildvrt" % (self.gdal_dir)
+        gdal_translate = "%s/gdal_translate" % (self.gdal_dir)
+
+        temp_file = os.path.sep.join( [tempfile.gettempdir(),next(tempfile._get_candidate_names())] )
+        # first, create the command to build the virtual merged ECW file
+        cmd_list = [ gda_lbuildvrt, temp_file ] + filenames + [ "-a_srs", self.epsg_pnoa ]
+        print(cmd_list)
+        r = subprocess.run(cmd_list, capture_output=True)
+        print(r.stdout)
+
+        left, bottom, right, top = map(lambda x: str(x), bounds)
+        cmd_list = [ gdal_translate, "-projwin_srs", self.epsg_pnoa, 
+                    "-projwin", left, top, right, bottom,
+                    "-of", "PNG", temp_file, fout ]
+        print(cmd_list)
+        r = subprocess.run(cmd_list, capture_output=True)
+        print(r.stdout)
+        os.remove(temp_file)
+        # $QGIS/gdalbuildvrt MergedECW ecw1 ecw2 ... -a_srs EPSG:25830
+        # $QGIS/gdal_translate -projwin_srs EPSG:25830 -projwin left top right bottom -of GTiff MergedECW out.tif
+
+
+
 
     def save_to_asc(self, fout, width, height, window, transform, crs):
         """save to asc (grid) format. Internal

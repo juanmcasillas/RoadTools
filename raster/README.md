@@ -199,3 +199,14 @@ Band 2 Block=256x256 Type=Byte, ColorInterp=Green
 Band 3 Block=256x256 Type=Byte, ColorInterp=Blue
   NoData Value=0
 ```
+
+## for now, the multisheet supports up to 2 sheets (tested) 4 nopes.
+##
+
+$PYQGIS37 mapdbmanager.py ../gpx/AC_navas_big_bounds.json /Volumes/Shared/temp/AC_navas_bajada_puerto_mdt05.asc  MDT05 asc
+$PYQGIS37 mapdbmanager.py ../gpx/AC_navas_big_bounds.json /Volumes/Shared/temp/AC_navas_bajada_puerto_mdt25.asc  MDT25 asc
+$PYQGIS37 mapdbmanager.py ../gpx/AC_navas_big_bounds.json /Volumes/Shared/temp/AC_navas_bajada_puerto_pnoa.jpg  PNOA jpg
+$PYQGIS37 mapdbmanager.py ../gpx/AC_casillas.bounds /Volumes/Shared/temp/AC_casillas_mdt05.asc MDT05 asc
+$PYQGIS37 mapdbmanager.py ../gpx/AC_casillas.bounds /Volumes/Shared/temp/AC_casillas_mdt25.asc MDT25 asc
+$PYQGIS37 mapdbmanager.py ../gpx/AC_casillas.bounds /Volumes/Shared/temp/AC_casillas_pnoa.jpg PNOA jpg
+
