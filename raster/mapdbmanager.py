@@ -66,11 +66,13 @@ if __name__ == "__main__":
     bounds = raster.Bounds().from_file(args.boundfile)
     sheets = MTN.to_MTN(bounds=bounds)['MTN50']
     mtn50_sheets = [sheet[1] for sheet in sheets]
-   
+
+    # hack the MTN02 (is MTN25 and there are more sheets)
+    mtn50_sheets = [580, 579, 557, 556]
     mapdb = MapDbManager()
     source_files = mapdb.get_files(args.origin, mtn50_sheets)
-    
-    print(mtn50_sheets)
+
+
     rasterman = raster.RasterManager()
     rasterman.rect_m(source_files, args.outfile, bounds, mode=args.product)
 

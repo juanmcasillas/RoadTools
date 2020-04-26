@@ -98,6 +98,7 @@ class Bounds:
             self.from_string(jsonstr)
 
     def from_string(self, jsonstr):
+        
         ret = json.loads(jsonstr)
         for i in ["top","left","bottom","right"]:
             setattr(self,i, ret[i])

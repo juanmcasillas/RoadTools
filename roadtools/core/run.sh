@@ -1,0 +1,3 @@
+$PYQGIS37 modify_asc_nodata.py -v -w 10 -mx -5 -j ../../gpx/AC_casillas.bounds ../../gpx/subida_casillas_1s.gpx /Volumes/Shared/temp/subida_casillas/AC_casillas_mdt02.asc /Volumes/Shared/temp/subida_casillas/AC_02.asc
+$PYQGIS37 modify_asc_nodata.py -v -w 20 -mx -5 -j ../../gpx/AC_casillas.bounds ../../gpx/subida_casillas_1s.gpx /Volumes/Shared/temp/subida_casillas/AC_casillas_mdt05.asc /Volumes/Shared/temp/subida_casillas/AC_05.asc
+$PYQGIS37 modify_asc_nodata.py -v -w 10 -mx -5 -j ../../gpx/AC_casillas.bounds ../../gpx/subida_casillas_1s.gpx /Volumes/Shared/temp/subida_casillas/AC_casillas_mdt25.asc /Volumes/Shared/temp/subida_casillas/AC_25.asc
