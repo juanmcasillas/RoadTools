@@ -99,7 +99,7 @@ class Bounds:
 
     def from_string(self, jsonstr):
         
-        ret = json.loads(jsonstr)
+        ret = json.loads(jsonstr) 
         for i in ["top","left","bottom","right"]:
             setattr(self,i, ret[i])
         return self
@@ -273,8 +273,9 @@ class RasterManager:
                 src = rasterio.open(i,mode='r')
                 fds.append(src)
 
-            #if mode in [ 'geotiff', 'png', 'jpg' ]:
-            #    return self.rect_gdal( utm_bounds, filenames, fout)
+            if mode in [ 'geotiff', 'png', 'jpg' ] and len(filenames)>=3:
+                print("using GDAL to generate the subset")
+                return self.rect_gdal( utm_bounds, filenames, fout)
 
             print("merging files")
             big_array, big_transform = rasterio.merge.merge(fds,bounds=utm_bounds,precision=50)

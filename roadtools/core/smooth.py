@@ -276,7 +276,8 @@ def smooth_gpx( gpx_file, optimize=True, zero=False, geoid=False, output="output
             vt = (-v[1], v[0]) 
             
             vmod = math.sqrt( vt[0]*vt[0] + vt[1]*vt[1])
-            
+            if vmod == 0:
+                continue
             vt = ( vt[0] / vmod, vt[1] / vmod)
             # the vector is opposite to the standard rotation (CCW)
             # if you want to move to the right (CW)

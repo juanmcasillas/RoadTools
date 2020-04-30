@@ -68,11 +68,14 @@ if __name__ == "__main__":
     mtn50_sheets = [sheet[1] for sheet in sheets]
 
     # hack the MTN02 (is MTN25 and there are more sheets)
-    mtn50_sheets = [580, 579, 557, 556]
+    #mtn50_sheets = [580, 579, 557, 556]
+    print("Sheets: ",mtn50_sheets)
+    #mtn50_sheets = ['579-1', '578-2', '556-3', '555-4']
+    print("Sheets: ",mtn50_sheets)
     mapdb = MapDbManager()
     source_files = mapdb.get_files(args.origin, mtn50_sheets)
 
-
+    #print(source_files)
     rasterman = raster.RasterManager()
     rasterman.rect_m(source_files, args.outfile, bounds, mode=args.product)
 
