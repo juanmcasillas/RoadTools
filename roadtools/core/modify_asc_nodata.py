@@ -198,7 +198,7 @@ class RasterEdit(RasterManager):
 
 
 
-    def rect(self, fin, fout, bounds, points, mode='asc', hop=2, carve=-1, gpx_bounds=None):
+    def rect(self, fin, fout, fmd25, bounds, points, mode='asc', hop=2, carve=-1, gpx_bounds=None, dontmove=False):
 
         rects = build_rectangles(points, gpx_bounds, distance=hop/2)
 
@@ -215,6 +215,9 @@ class RasterEdit(RasterManager):
         lon_idx = 2
         lat_idx = 3
         elev_idx = 4
+
+        lowres_dataset = rasterio.open(fmd25, mode='r')
+        lowres_data = lowres_dataset.read()
 
         with rasterio.open(fin, mode='r') as dataset:
             print(dataset.crs)
@@ -258,16 +261,30 @@ class RasterEdit(RasterManager):
 
                 # copy terrain
                 for x, y, dx, dy in surround_point(c_x, c_y ,hop=hop):
-                    empty[0][y,x] = data[0][y,x] if empty[0][y,x] == nodata_value else empty[0][y,x]
 
-                # flatten the bottom line
-                for p in draw_points:
-                    ax,ay = p
-                    for x, y, dx, dy in surround_point(ax, ay ,hop=2):
-                        #far_value = data[0][y,x]
-                        #near_value = c_z
-                        #value = numpy.interp(dx,[0,hop],[near_value,far_value])
-                        empty[0][y,x] = c_z-0.5
+                    # translate reversal and map again
+                    utm_x, utm_y = dataset.xy(y, x)
+                    ##print(x,y, utm_x, utm_y)
+                    yl, xl = lowres_dataset.index(utm_x, utm_y)
+
+                    if y <0 or y >= empty.shape[1] or x <0 or x >= empty.shape[2]:
+                        continue
+                    #if y <0 or y >= lowres_data.shape[1] or x <0 or x >= lowres_data.shape[2]:
+                    #    continue
+                    empty[0][y,x] = data[0][y,x]  if empty[0][y,x] == nodata_value else empty[0][y,x]
+
+                # flatten the bottom line (move to the track)
+                dontmove = False
+                if not dontmove:
+                    for p in draw_points:
+                        ax,ay = p
+                        for x, y, dx, dy in surround_point(ax, ay ,hop=1):
+                            #far_value = data[0][y,x]
+                            #near_value = c_z
+                            #value = numpy.interp(dx,[0,hop],[near_value,far_value])
+                            if y <0 or y >= empty.shape[1] or x <0 or x >= empty.shape[2]:
+                                continue
+                            empty[0][y,x] = c_z-0.5
 
 
             with rasterio.open(fout,'w',
@@ -323,10 +340,12 @@ if __name__ == "__main__":
     parser.add_argument("-mxy", "--movexy", help="Offset to the left <0 or right >0 in the XY plane", type=float, default=0.0)
     parser.add_argument("-melev", "--moveelev", help="Offset Height", type=float, default=0.0)
     parser.add_argument("-g", "--geoid", help="Calculate the geoid N value and fix altitude", action="store_true")
+    parser.add_argument("-X", "--dontmove", help="Don't move, only copy", action="store_true")
     parser.add_argument("-w", "--width", help="explore from bounds", type=int, default=2)
     parser.add_argument("-p", "--carve", help="carve inside", type=int, default=-1)
     maingroup.add_argument("gpxfile", help="GPX file")
     maingroup.add_argument("infile", help="Input File")
+    maingroup.add_argument("md25file", help="Input File Low res")
     maingroup.add_argument("outfile", help="Output File")
 
 
@@ -366,4 +385,4 @@ if __name__ == "__main__":
             points[i].elevation += avg_height
 
     # move the terrain to the gpx
-    rasteredit.rect(args.infile, args.outfile, bounds, points, hop=args.width, carve=args.carve, gpx_bounds=gpx_bounds)
+    rasteredit.rect(args.infile, args.outfile, args.md25file, bounds, points, hop=args.width, carve=args.carve, gpx_bounds=gpx_bounds, dontmove=args.dontmove)
